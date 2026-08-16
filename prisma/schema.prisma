@@ -1,0 +1,218 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  passwordHash  String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  journals      JournalEntry[]
+  notes         Note[]
+  strategies    Strategy[]
+  propFirms     PropFirmAccount[]
+  tradingRules  TradingRule[]
+  psychologies  PsychologyEntry[]
+  backtests     BacktestSession[]
+}
+
+model Account {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  broker          String
+  accountType     String   // PERSONAL, FUNDED, EVALUATION, DEMO, BACKTEST
+  startingBalance Float
+  currentBalance  Float
+  currency        String   @default("USD")
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  trades          Trade[]
+}
+
+model Trade {
+  id              String      @id @default(uuid())
+  accountId       String
+  account         Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  symbol          String
+  assetClass      String      // FOREX, FUTURES, STOCKS, CRYPTO, INDICES, COMMODITIES
+  direction       String      // LONG, SHORT
+  entryPrice      Float
+  exitPrice       Float
+  quantity        Float
+  stopLoss        Float?
+  takeProfit      Float?
+  entryTime       DateTime
+  exitTime        DateTime?
+  durationMinutes Int?
+  grossPnL        Float
+  fees            Float       @default(0)
+  netPnL          Float
+  rMultiple       Float       @default(0)
+  initialRisk     Float       @default(0)
+  initialReward   Float       @default(0)
+  strategyId      String?
+  strategy        Strategy?   @relation(fields: [strategyId], references: [id], onDelete: SetNull)
+  setup           String?
+  tags            String?     // JSON array string
+  mistake         String?
+  emotion         String?
+  rating          Int?        @default(5)
+  notes           String?
+  reviewStatus    String      @default("REVIEWED")
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  executions      Execution[]
+}
+
+model Execution {
+  id        String   @id @default(uuid())
+  tradeId   String
+  trade     Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  timestamp DateTime @default(now())
+  action    String   // BUY, SELL
+  quantity  Float
+  price     Float
+  fee       Float    @default(0)
+}
+
+model Strategy {
+  id          String         @id @default(uuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  market      String?
+  timeframe   String?
+  session     String?
+  winRate     Float          @default(0)
+  netPnL      Float          @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  trades      Trade[]
+  rules       StrategyRule[]
+}
+
+model StrategyRule {
+  id         String   @id @default(uuid())
+  strategyId String
+  strategy   Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  title      String
+  category   String   @default("ENTRY") // ENTRY, CONFIRMATION, RISK, EXIT
+  isOptional Boolean  @default(false)
+}
+
+model JournalEntry {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date             String   // YYYY-MM-DD
+  preMarketPlan    String?
+  duringSession    String?
+  endOfDayReview   String?
+  whatWentWell     String?
+  whatWentWrong    String?
+  biggestLesson    String?
+  emotionalState   String?
+  ruleAdherence    Float    @default(100)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  folder    String   @default("Daily Journal")
+  content   String
+  tags      String?
+  isFavorite Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PropFirmAccount {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firmName         String
+  accountSize      Float
+  challengePhase   String   // PHASE_1, PHASE_2, FUNDED
+  startingBalance  Float
+  currentBalance   Float
+  profitTarget     Float
+  dailyLossLimit   Float
+  maximumLossLimit Float
+  payoutTarget     Float
+  status           String   @default("ACTIVE") // ACTIVE, PASSED, BREACHED
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model TradingRule {
+  id          String           @id @default(uuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruleText    String
+  category    String           @default("RISK")
+  completions RuleCompletion[]
+}
+
+model RuleCompletion {
+  id        String      @id @default(uuid())
+  ruleId    String
+  rule      TradingRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  date      String      // YYYY-MM-DD
+  isFollowed Boolean    @default(true)
+}
+
+model PsychologyEntry {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        String   // YYYY-MM-DD
+  emotion     String
+  confidence  Int      // 1-10
+  stressLevel Int      // 1-10
+  focusScore  Int      // 1-10
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model BacktestSession {
+  id              String          @id @default(uuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  symbol          String
+  timeframe       String
+  startingBalance Float
+  riskPerTrade    Float
+  createdAt       DateTime        @default(now())
+  trades          BacktestTrade[]
+}
+
+model BacktestTrade {
+  id        String          @id @default(uuid())
+  sessionId String
+  session   BacktestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  direction String
+  entry     Float
+  exit      Float
+  sl        Float
+  tp        Float
+  pnl       Float
+  rMultiple Float
+  notes     String?
+}
