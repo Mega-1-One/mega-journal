@@ -1,5 +1,7 @@
 import { TradeInput, calculateTradeMetrics, TradeCalculated } from './calculations';
-import { BacktestSessionData } from './backtestEngine';
+import { BacktestSessionData, BacktestTradeData } from './backtestEngine';
+
+export type { BacktestSessionData, BacktestTradeData };
 
 export interface AccountData {
   id: string;
