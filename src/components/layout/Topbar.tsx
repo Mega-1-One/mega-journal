@@ -13,6 +13,7 @@ import {
   Calendar,
   Wallet,
 } from 'lucide-react';
+import { DatePreset } from '@/lib/dates';
 
 export function Topbar() {
   const pathname = usePathname();
@@ -22,8 +23,8 @@ export function Topbar() {
     selectedAccount,
     setSelectedAccount,
     accounts,
-    dateRange,
-    setDateRange,
+    datePreset,
+    setDatePreset,
     isPrivacyMode,
     setIsPrivacyMode,
     setIsQuickAddOpen,
@@ -42,6 +43,7 @@ export function Topbar() {
     if (pathname === '/journal') return 'Daily Journal';
     if (pathname === '/notebook') return 'Notebook';
     if (pathname === '/discipline') return 'Trading Rules & Discipline';
+    if (pathname === '/goals') return 'Goals & Targets';
     if (pathname === '/prop-firm') return 'Prop Firm Risk Monitor';
     if (pathname === '/import') return 'Broker CSV Importer';
     if (pathname === '/settings') return 'Settings & Preferences';
@@ -90,15 +92,18 @@ export function Topbar() {
         <div className="hidden sm:flex items-center gap-1.5 bg-bg-main border border-bg-border rounded-xl px-3 py-1.5 text-xs">
           <Calendar className="w-3.5 h-3.5 text-text-muted" />
           <select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value as any)}
+            value={datePreset}
+            onChange={(e) => setDatePreset(e.target.value as DatePreset)}
             className="bg-transparent text-text-secondary font-medium focus:outline-none cursor-pointer hover:text-text-primary"
           >
             <option value="ALL" className="bg-bg-card text-text-primary">All Time</option>
             <option value="TODAY" className="bg-bg-card text-text-primary">Today</option>
+            <option value="YESTERDAY" className="bg-bg-card text-text-primary">Yesterday</option>
             <option value="THIS_WEEK" className="bg-bg-card text-text-primary">This Week</option>
+            <option value="LAST_WEEK" className="bg-bg-card text-text-primary">Last Week</option>
             <option value="THIS_MONTH" className="bg-bg-card text-text-primary">This Month</option>
-            <option value="LAST_30_DAYS" className="bg-bg-card text-text-primary">Last 30 Days</option>
+            <option value="LAST_MONTH" className="bg-bg-card text-text-primary">Last Month</option>
+            <option value="THIS_YEAR" className="bg-bg-card text-text-primary">This Year</option>
           </select>
         </div>
 
@@ -120,13 +125,15 @@ export function Topbar() {
           {theme === 'dark' ? <Sun className="w-4 h-4 text-lime" /> : <Moon className="w-4 h-4 text-text-primary" />}
         </button>
 
-        {/* Primary Action Button (#C8FF00 background, #0B0D0F text) */}
+        {/* Primary Action Button (#C8FF00 background, #0B0D0F text, N shortcut tooltip) */}
         <button
           onClick={() => setIsQuickAddOpen(true)}
           className="btn-primary-lime text-xs px-4 py-2 rounded-xl shadow-glow flex items-center gap-1.5 font-heading font-black"
+          title="Add Trade (Press N)"
         >
           <Plus className="w-4 h-4 stroke-[3]" />
           <span className="hidden sm:inline">Add Trade</span>
+          <kbd className="hidden lg:inline-block bg-black/20 text-black px-1.5 py-0.2 rounded text-[10px] font-mono">N</kbd>
         </button>
       </div>
     </header>

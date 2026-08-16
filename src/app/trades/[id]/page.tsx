@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -13,18 +13,35 @@ import {
   Activity,
   Save,
   Sparkles,
+  Archive,
+  Image as ImageIcon,
+  Star,
+  Edit3,
 } from 'lucide-react';
 
 export default function TradeWorkspacePage() {
   const params = useParams();
-  const { trades, updateTrade, formatValue } = useApp();
+  const router = useRouter();
+  const { trades, updateTrade, archiveTrade, formatValue, activeAccountData } = useApp();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const tradeId = params.id as string;
   const trade = trades.find((t) => t.id === tradeId) || trades[0];
 
-  const [activeTab, setActiveTab] = useState<'STATS' | 'RULES' | 'FILLS'>('STATS');
-  const [notes, setNotes] = useState(trade?.notes || '');
+  const [activeTab, setActiveTab] = useState<'STATS' | 'RULES' | 'PSYCHOLOGY' | 'SCREENSHOTS'>('STATS');
+
+  // Structured Notes State
+  const [whyEntered, setWhyEntered] = useState(trade?.structuredNotes?.whyEntered || '');
+  const [whatSaw, setWhatSaw] = useState(trade?.structuredNotes?.whatSaw || '');
+  const [whatWentWell, setWhatWentWell] = useState(trade?.structuredNotes?.whatWentWell || '');
+  const [whatWentWrong, setWhatWentWrong] = useState(trade?.structuredNotes?.whatWentWrong || '');
+  const [lessonLearned, setLessonLearned] = useState(trade?.structuredNotes?.lessonLearned || '');
+
+  // Screenshot Upload State
+  const [beforeUrl, setBeforeUrl] = useState(trade?.screenshots?.before || '');
+  const [entryUrl, setEntryUrl] = useState(trade?.screenshots?.entry || '');
+  const [exitUrl, setExitUrl] = useState(trade?.screenshots?.exit || '');
+
   const [ruleChecklist, setRuleChecklist] = useState<Record<string, boolean>>({
     'Rule 1: Liquidity swept on HTF': true,
     'Rule 2: Market Structure Shift on 5m': true,
@@ -35,7 +52,14 @@ export default function TradeWorkspacePage() {
 
   useEffect(() => {
     if (trade) {
-      setNotes(trade.notes || '');
+      setWhyEntered(trade.structuredNotes?.whyEntered || 'Swept liquidity into 15m Fair Value Gap.');
+      setWhatSaw(trade.structuredNotes?.whatSaw || '5m Market Structure Shift with high volume displacement.');
+      setWhatWentWell(trade.structuredNotes?.whatWentWell || 'Waited patiently for 50% FVG retrace entry.');
+      setWhatWentWrong(trade.structuredNotes?.whatWentWrong || 'No major execution mistakes.');
+      setLessonLearned(trade.structuredNotes?.lessonLearned || 'Sticking to pre-market bias yields high expectancy.');
+      setBeforeUrl(trade.screenshots?.before || '');
+      setEntryUrl(trade.screenshots?.entry || '');
+      setExitUrl(trade.screenshots?.exit || '');
     }
   }, [trade]);
 
@@ -50,7 +74,7 @@ export default function TradeWorkspacePage() {
     const height = canvas.height;
     ctx.clearRect(0, 0, width, height);
 
-    ctx.fillStyle = '#111417';
+    ctx.fillStyle = '#0B0D0F';
     ctx.fillRect(0, 0, width, height);
 
     // Subtle grid lines
@@ -118,7 +142,7 @@ export default function TradeWorkspacePage() {
     ctx.fillStyle = '#EF4444';
     ctx.fillText(`STOP LOSS: ${sl}`, 10, slY - 6);
 
-    // Take Profit Line (Green/Lime)
+    // Take Profit Line (Lime)
     const tpY = getY(tp);
     ctx.strokeStyle = '#C8FF00';
     ctx.setLineDash([4, 4]);
@@ -146,9 +170,32 @@ export default function TradeWorkspacePage() {
     setRuleChecklist((prev) => ({ ...prev, [rule]: !prev[rule] }));
   };
 
-  const handleSaveNotes = () => {
-    updateTrade(trade.id, { notes });
+  const handleSaveStructuredNotes = () => {
+    updateTrade(trade.id, {
+      structuredNotes: {
+        whyEntered,
+        whatSaw,
+        whatWentWell,
+        whatWentWrong,
+        lessonLearned,
+      },
+      screenshots: {
+        before: beforeUrl,
+        entry: entryUrl,
+        exit: exitUrl,
+      },
+    });
   };
+
+  const handleArchive = () => {
+    if (confirm('Are you sure you want to soft archive this trade? It will be excluded from analytics.')) {
+      archiveTrade(trade.id);
+      router.push('/trades');
+    }
+  };
+
+  const balanceBefore = activeAccountData ? activeAccountData.currentBalance - trade.netPnL : 10000;
+  const balanceAfter = activeAccountData ? activeAccountData.currentBalance : 10000 + trade.netPnL;
 
   return (
     <div className="space-y-6 pb-12">
@@ -157,7 +204,7 @@ export default function TradeWorkspacePage() {
         <div className="flex items-center gap-3">
           <Link
             href="/trades"
-            className="p-2 rounded-lg bg-bg-card hover:bg-bg-nested text-text-secondary hover:text-text-primary border border-bg-border transition-colors"
+            className="p-2 rounded-xl bg-bg-card hover:bg-bg-nested text-text-secondary hover:text-text-primary border border-bg-border transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
@@ -178,10 +225,17 @@ export default function TradeWorkspacePage() {
         </div>
 
         <div className="flex items-center gap-3 font-mono-num">
+          <button
+            onClick={handleArchive}
+            className="px-3 py-1.5 rounded-xl bg-loss/10 hover:bg-loss/20 text-loss border border-loss/20 text-xs font-bold font-heading flex items-center gap-1.5"
+          >
+            <Archive className="w-3.5 h-3.5" /> Soft Archive
+          </button>
+
           <span className={`text-xl font-black ${trade.netPnL >= 0 ? 'text-lime' : 'text-loss'}`}>
             {formatValue(trade.netPnL, undefined, trade.initialRisk)}
           </span>
-          <span className="px-2.5 py-1 rounded-lg bg-lime/10 text-lime border border-lime/20 font-bold text-xs font-heading">
+          <span className="px-2.5 py-1 rounded-xl bg-lime/10 text-lime border border-lime/20 font-bold text-xs font-heading">
             {trade.rMultiple >= 0 ? '+' : ''}{trade.rMultiple}R
           </span>
         </div>
@@ -198,12 +252,12 @@ export default function TradeWorkspacePage() {
               {prevTrade ? (
                 <Link
                   href={`/trades/${prevTrade.id}`}
-                  className="flex-1 p-2 rounded-lg bg-bg-nested border border-bg-border text-xs text-text-secondary hover:text-text-primary flex items-center justify-center gap-1"
+                  className="flex-1 p-2 rounded-xl bg-bg-nested border border-bg-border text-xs text-text-secondary hover:text-text-primary flex items-center justify-center gap-1"
                 >
                   <ChevronLeft className="w-4 h-4" /> Prev
                 </Link>
               ) : (
-                <button disabled className="flex-1 p-2 rounded-lg bg-bg-nested opacity-40 text-xs text-text-muted flex items-center justify-center gap-1">
+                <button disabled className="flex-1 p-2 rounded-xl bg-bg-nested opacity-40 text-xs text-text-muted flex items-center justify-center gap-1">
                   <ChevronLeft className="w-4 h-4" /> Prev
                 </button>
               )}
@@ -211,12 +265,12 @@ export default function TradeWorkspacePage() {
               {nextTrade ? (
                 <Link
                   href={`/trades/${nextTrade.id}`}
-                  className="flex-1 p-2 rounded-lg bg-bg-nested border border-bg-border text-xs text-text-secondary hover:text-text-primary flex items-center justify-center gap-1"
+                  className="flex-1 p-2 rounded-xl bg-bg-nested border border-bg-border text-xs text-text-secondary hover:text-text-primary flex items-center justify-center gap-1"
                 >
                   Next <ChevronRight className="w-4 h-4" />
                 </Link>
               ) : (
-                <button disabled className="flex-1 p-2 rounded-lg bg-bg-nested opacity-40 text-text-muted text-xs flex items-center justify-center gap-1">
+                <button disabled className="flex-1 p-2 rounded-xl bg-bg-nested opacity-40 text-text-muted text-xs flex items-center justify-center gap-1">
                   Next <ChevronRight className="w-4 h-4" />
                 </button>
               )}
@@ -234,106 +288,102 @@ export default function TradeWorkspacePage() {
           </div>
         </div>
 
-        {/* Center Column: Stats & Rules */}
+        {/* Center Column: Performance & Context */}
         <div className="lg:col-span-5 custom-card p-5 flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2 border-b border-bg-border pb-3 mb-4 font-heading">
               <button
                 onClick={() => setActiveTab('STATS')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                   activeTab === 'STATS' ? 'bg-lime text-bg-main' : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
-                Statistics
+                Performance
+              </button>
+              <button
+                onClick={() => setActiveTab('PSYCHOLOGY')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  activeTab === 'PSYCHOLOGY' ? 'bg-lime text-bg-main' : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                Psychology
               </button>
               <button
                 onClick={() => setActiveTab('RULES')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                   activeTab === 'RULES' ? 'bg-lime text-bg-main' : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
-                Rule Checklist
-              </button>
-              <button
-                onClick={() => setActiveTab('FILLS')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  activeTab === 'FILLS' ? 'bg-lime text-bg-main' : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                Executions
+                Checklist
               </button>
             </div>
 
             {activeTab === 'STATS' && (
               <div className="grid grid-cols-2 gap-3 text-xs font-mono-num">
-                <div className="p-3 bg-bg-nested rounded-lg border border-bg-border">
+                <div className="p-3 bg-bg-nested rounded-xl border border-bg-border">
+                  <span className="text-[10px] text-text-muted font-bold uppercase block font-heading">Account</span>
+                  <span className="text-xs font-bold text-text-primary block truncate">{trade.account}</span>
+                </div>
+                <div className="p-3 bg-bg-nested rounded-xl border border-bg-border">
+                  <span className="text-[10px] text-text-muted font-bold uppercase block font-heading">Balance Impact</span>
+                  <span className="text-xs font-bold text-text-primary">${balanceBefore.toLocaleString()} → ${balanceAfter.toLocaleString()}</span>
+                </div>
+                <div className="p-3 bg-bg-nested rounded-xl border border-bg-border">
                   <span className="text-[10px] text-text-muted font-bold uppercase block font-heading">Entry Price</span>
                   <span className="text-sm font-bold text-text-primary">{trade.entryPrice}</span>
                 </div>
-                <div className="p-3 bg-bg-nested rounded-lg border border-bg-border">
+                <div className="p-3 bg-bg-nested rounded-xl border border-bg-border">
                   <span className="text-[10px] text-text-muted font-bold uppercase block font-heading">Exit Price</span>
                   <span className="text-sm font-bold text-text-primary">{trade.exitPrice}</span>
                 </div>
-                <div className="p-3 bg-bg-nested rounded-lg border border-bg-border">
+                <div className="p-3 bg-bg-nested rounded-xl border border-bg-border">
                   <span className="text-[10px] text-text-muted font-bold uppercase block font-heading">Stop Loss</span>
                   <span className="text-sm font-bold text-loss">{trade.stopLoss || 'N/A'}</span>
                 </div>
-                <div className="p-3 bg-bg-nested rounded-lg border border-bg-border">
+                <div className="p-3 bg-bg-nested rounded-xl border border-bg-border">
                   <span className="text-[10px] text-text-muted font-bold uppercase block font-heading">Take Profit</span>
                   <span className="text-sm font-bold text-lime">{trade.takeProfit || 'N/A'}</span>
                 </div>
-                <div className="p-3 bg-bg-nested rounded-lg border border-bg-border">
-                  <span className="text-[10px] text-text-muted font-bold uppercase block font-heading">Initial Risk</span>
-                  <span className="text-sm font-bold text-text-primary">${trade.initialRisk}</span>
+              </div>
+            )}
+
+            {activeTab === 'PSYCHOLOGY' && (
+              <div className="space-y-3 text-xs">
+                <div className="p-3 bg-bg-nested rounded-xl border border-bg-border flex items-center justify-between">
+                  <span className="text-text-muted font-heading">Emotion state</span>
+                  <span className="font-bold text-lime font-heading">{trade.emotion || 'Calm'}</span>
                 </div>
-                <div className="p-3 bg-bg-nested rounded-lg border border-bg-border">
-                  <span className="text-[10px] text-text-muted font-bold uppercase block font-heading">Risk / Reward</span>
-                  <span className="text-sm font-bold text-text-secondary">1 : {trade.riskRewardRatio}</span>
+                <div className="p-3 bg-bg-nested rounded-xl border border-bg-border flex items-center justify-between">
+                  <span className="text-text-muted font-heading">Confidence rating</span>
+                  <span className="font-bold text-text-primary font-mono-num">{trade.confidence || 8} / 10</span>
+                </div>
+                <div className="p-3 bg-bg-nested rounded-xl border border-bg-border flex items-center justify-between">
+                  <span className="text-text-muted font-heading">Mistake tag</span>
+                  <span className="font-bold text-warning font-heading">{trade.mistake || 'None'}</span>
+                </div>
+                <div className="p-3 bg-bg-nested rounded-xl border border-bg-border flex items-center justify-between">
+                  <span className="text-text-muted font-heading">Overall rating</span>
+                  <div className="flex items-center text-lime">
+                    {Array.from({ length: trade.rating || 5 }).map((_, i) => (
+                      <Star key={i} className="w-3.5 h-3.5 fill-lime" />
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
 
             {activeTab === 'RULES' && (
               <div className="space-y-2.5 text-xs">
-                <div className="flex items-center justify-between text-text-muted text-[11px] mb-2 font-semibold font-heading">
-                  <span>Checklist Verification</span>
-                  <span className="text-lime">{followedRules} / {totalRules} Followed</span>
-                </div>
                 {Object.entries(ruleChecklist).map(([rule, isChecked]) => (
                   <button
                     key={rule}
                     onClick={() => toggleRule(rule)}
-                    className="w-full flex items-center gap-3 p-2.5 rounded-lg bg-bg-nested border border-bg-border text-text-primary hover:border-lime/40 transition-colors text-left"
+                    className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-bg-nested border border-bg-border text-text-primary hover:border-lime/40 transition-colors text-left"
                   >
                     {isChecked ? <CheckSquare className="w-4 h-4 text-lime" /> : <Square className="w-4 h-4 text-text-muted" />}
                     <span className={isChecked ? 'line-through text-text-muted' : 'font-medium'}>{rule}</span>
                   </button>
                 ))}
-              </div>
-            )}
-
-            {activeTab === 'FILLS' && (
-              <div className="space-y-2 text-xs font-mono-num">
-                <div className="p-2.5 bg-bg-nested rounded-lg border border-bg-border flex items-center justify-between">
-                  <div>
-                    <span className="text-lime font-bold font-heading">BUY FILL #1</span>
-                    <span className="text-text-muted text-[10px] block">{new Date(trade.entryTime).toLocaleTimeString()}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-text-primary font-bold">{trade.quantity} Lots @ {trade.entryPrice}</span>
-                    <span className="text-text-muted text-[10px] block">Fee: ${trade.totalFees}</span>
-                  </div>
-                </div>
-                <div className="p-2.5 bg-bg-nested rounded-lg border border-bg-border flex items-center justify-between">
-                  <div>
-                    <span className="text-loss font-bold font-heading">SELL FILL #2</span>
-                    <span className="text-text-muted text-[10px] block">{new Date(trade.exitTime).toLocaleTimeString()}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-text-primary font-bold">{trade.quantity} Lots @ {trade.exitPrice}</span>
-                    <span className="text-text-muted text-[10px] block">Fee: $0.00</span>
-                  </div>
-                </div>
               </div>
             )}
           </div>
@@ -342,7 +392,7 @@ export default function TradeWorkspacePage() {
         {/* Right Column: Chart Visualizer */}
         <div className="lg:col-span-4 custom-card p-4 flex flex-col">
           <h3 className="text-xs font-bold text-text-primary tracking-tight mb-2 flex items-center gap-2 font-heading">
-            <Activity className="w-4 h-4 text-lime" /> Execution Chart
+            <Activity className="w-4 h-4 text-lime" /> Execution Chart Visualizer
           </h3>
           <div className="flex-1 w-full bg-bg-surface rounded-xl border border-bg-border overflow-hidden">
             <canvas ref={canvasRef} width={380} height={240} className="w-full h-full object-cover" />
@@ -350,27 +400,73 @@ export default function TradeWorkspacePage() {
         </div>
       </div>
 
-      {/* Bottom Notes & Post-Mortem */}
-      <div className="custom-card p-6 space-y-4">
-        <div className="flex items-center justify-between">
+      {/* Structured Notes & Lessons Section */}
+      <div className="custom-card p-6 space-y-6">
+        <div className="flex items-center justify-between border-b border-bg-border pb-3">
           <h3 className="text-sm font-bold text-text-primary tracking-tight flex items-center gap-2 font-heading">
-            <Sparkles className="w-4 h-4 text-lime" /> Trade Review & Thesis
+            <Sparkles className="w-4 h-4 text-lime" /> Structured Trade Journal & Review
           </h3>
           <button
-            onClick={handleSaveNotes}
-            className="btn-primary-lime text-xs px-3.5 py-1.5 rounded-lg shadow flex items-center gap-1 font-heading font-black"
+            onClick={handleSaveStructuredNotes}
+            className="btn-primary-lime text-xs px-4 py-2 rounded-xl shadow-glow flex items-center gap-1.5 font-heading font-black"
           >
-            <Save className="w-3.5 h-3.5" /> Save Notes
+            <Save className="w-3.5 h-3.5" /> Save Review & Notes
           </button>
         </div>
 
-        <textarea
-          rows={4}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Write your trade thesis, post-trade emotions, and what you can improve for next session..."
-          className="w-full bg-bg-nested border border-bg-border rounded-xl p-4 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-lime resize-none"
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div>
+            <label className="text-text-muted font-bold block mb-1 uppercase text-[10px] font-heading">Why I Entered</label>
+            <textarea
+              rows={2}
+              value={whyEntered}
+              onChange={(e) => setWhyEntered(e.target.value)}
+              placeholder="What triggered your trade entry?"
+              className="w-full bg-bg-nested border border-bg-border rounded-xl p-3 text-text-primary focus:border-lime focus:outline-none resize-none"
+            />
+          </div>
+          <div>
+            <label className="text-text-muted font-bold block mb-1 uppercase text-[10px] font-heading">What I Saw</label>
+            <textarea
+              rows={2}
+              value={whatSaw}
+              onChange={(e) => setWhatSaw(e.target.value)}
+              placeholder="What market structure or indicator setup was visible?"
+              className="w-full bg-bg-nested border border-bg-border rounded-xl p-3 text-text-primary focus:border-lime focus:outline-none resize-none"
+            />
+          </div>
+          <div>
+            <label className="text-text-muted font-bold block mb-1 uppercase text-[10px] font-heading">What Went Well</label>
+            <textarea
+              rows={2}
+              value={whatWentWell}
+              onChange={(e) => setWhatWentWell(e.target.value)}
+              placeholder="What parts of your rule execution were solid?"
+              className="w-full bg-bg-nested border border-bg-border rounded-xl p-3 text-text-primary focus:border-lime focus:outline-none resize-none"
+            />
+          </div>
+          <div>
+            <label className="text-text-muted font-bold block mb-1 uppercase text-[10px] font-heading">What Went Wrong</label>
+            <textarea
+              rows={2}
+              value={whatWentWrong}
+              onChange={(e) => setWhatWentWrong(e.target.value)}
+              placeholder="Any execution hesitation, early exit, or FOMO?"
+              className="w-full bg-bg-nested border border-bg-border rounded-xl p-3 text-text-primary focus:border-lime focus:outline-none resize-none"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-text-muted font-bold block mb-1 uppercase text-[10px] font-heading">Key Lesson Learned</label>
+          <input
+            type="text"
+            value={lessonLearned}
+            onChange={(e) => setLessonLearned(e.target.value)}
+            placeholder="Single key takeaway for your trading rulebook..."
+            className="w-full bg-bg-nested border border-bg-border rounded-xl p-3 text-xs text-text-primary focus:border-lime focus:outline-none font-bold"
+          />
+        </div>
       </div>
     </div>
   );

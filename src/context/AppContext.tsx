@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   TradeCalculated,
   AnalyticsSummary,
@@ -16,10 +16,10 @@ import {
   DEMO_STRATEGIES,
   getInitialCalculatedTrades,
 } from '@/lib/store';
+import { DatePreset, isDateInPreset } from '@/lib/dates';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
 export type DisplayUnit = 'DOLLAR' | 'PERCENT' | 'R_MULTIPLE' | 'PIPS';
-export type DateRange = 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'LAST_30_DAYS';
 
 interface AppContextType {
   theme: ThemeMode;
@@ -28,8 +28,13 @@ interface AppContextType {
   displayUnit: DisplayUnit;
   setDisplayUnit: (u: DisplayUnit) => void;
 
-  dateRange: DateRange;
-  setDateRange: (d: DateRange) => void;
+  datePreset: DatePreset;
+  setDatePreset: (d: DatePreset) => void;
+
+  customDateStart: string;
+  setCustomDateStart: (s: string) => void;
+  customDateEnd: string;
+  setCustomDateEnd: (e: string) => void;
 
   selectedAccount: string;
   setSelectedAccount: (acc: string) => void;
@@ -62,6 +67,7 @@ interface AppContextType {
   addTrade: (t: any) => void;
   updateTrade: (id: string, updates: Partial<TradeCalculated>) => void;
   deleteTrade: (id: string) => void;
+  archiveTrade: (id: string) => void;
   duplicateTrade: (id: string) => void;
 
   formatValue: (amount: number, unitOverride?: DisplayUnit, riskAmount?: number) => string;
@@ -72,7 +78,9 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeMode>('dark');
   const [displayUnit, setDisplayUnit] = useState<DisplayUnit>('DOLLAR');
-  const [dateRange, setDateRange] = useState<DateRange>('ALL');
+  const [datePreset, setDatePreset] = useState<DatePreset>('ALL');
+  const [customDateStart, setCustomDateStart] = useState<string>('');
+  const [customDateEnd, setCustomDateEnd] = useState<string>('');
   const [selectedAccount, setSelectedAccount] = useState<string>('ALL');
   const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
@@ -82,6 +90,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [propFirms] = useState<PropFirmData[]>(DEMO_PROP_FIRMS);
   const [strategies, setStrategies] = useState<StrategyData[]>(DEMO_STRATEGIES);
   const [trades, setTrades] = useState<TradeCalculated[]>(getInitialCalculatedTrades());
+
+  // Listen for Global Keyboard Shortcut 'N' to launch Add Trade Modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        setIsQuickAddOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const setTheme = (mode: ThemeMode) => {
     setThemeState(mode);
@@ -101,30 +130,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const activeAccountData = accounts.find((a) => a.name === selectedAccount) || accounts[0];
 
+  // Reactively Filter Active Non-Archived Trades by Account & Expanded Date Preset
   const filteredTrades = trades.filter((t) => {
+    if (t.status === 'ARCHIVED') return false;
     if (selectedAccount !== 'ALL' && t.account !== selectedAccount) return false;
-    if (dateRange === 'ALL') return true;
-
-    const tradeDate = new Date(t.entryTime);
-    const now = new Date();
-
-    if (dateRange === 'TODAY') {
-      return tradeDate.toDateString() === now.toDateString();
-    }
-    if (dateRange === 'THIS_WEEK') {
-      const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() - now.getDay());
-      return tradeDate >= startOfWeek;
-    }
-    if (dateRange === 'THIS_MONTH') {
-      return tradeDate.getMonth() === now.getMonth() && tradeDate.getFullYear() === now.getFullYear();
-    }
-    if (dateRange === 'LAST_30_DAYS') {
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      return tradeDate >= thirtyDaysAgo;
-    }
-
-    return true;
+    return isDateInPreset(t.entryTime, datePreset, customDateStart, customDateEnd);
   });
 
   const startingBalance = activeAccountData ? activeAccountData.startingBalance : 10000;
@@ -167,6 +177,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTrades((prev) => prev.filter((t) => t.id !== id));
   };
 
+  const archiveTrade = (id: string) => {
+    setTrades((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status: 'ARCHIVED' } : t))
+    );
+  };
+
   const duplicateTrade = (id: string) => {
     const existing = trades.find((t) => t.id === id);
     if (!existing) return;
@@ -201,8 +217,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setTheme,
         displayUnit,
         setDisplayUnit,
-        dateRange,
-        setDateRange,
+        datePreset,
+        setDatePreset,
+        customDateStart,
+        setCustomDateStart,
+        customDateEnd,
+        setCustomDateEnd,
         selectedAccount,
         setSelectedAccount,
         isPrivacyMode,
@@ -226,6 +246,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addTrade,
         updateTrade,
         deleteTrade,
+        archiveTrade,
         duplicateTrade,
         formatValue,
       }}

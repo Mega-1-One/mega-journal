@@ -1,5 +1,18 @@
-// Centralized Financial Calculations Engine for MEGA1
-// All monetary values, prices, and ratios are calculated with fixed decimal precision.
+// Centralized Financial Calculations Engine for MEGA JOURNAL / MegaLedger
+
+export interface StructuredNotes {
+  whyEntered?: string;
+  whatSaw?: string;
+  whatWentWell?: string;
+  whatWentWrong?: string;
+  lessonLearned?: string;
+}
+
+export interface TradeScreenshots {
+  before?: string;
+  entry?: string;
+  exit?: string;
+}
 
 export interface TradeInput {
   id?: string;
@@ -27,7 +40,9 @@ export interface TradeInput {
   confidence?: number;
   rating?: number;
   notes?: string;
-  status?: 'OPEN' | 'CLOSED';
+  structuredNotes?: StructuredNotes;
+  screenshots?: TradeScreenshots;
+  status?: 'ACTIVE' | 'ARCHIVED';
 }
 
 export interface TradeCalculated {
@@ -65,7 +80,9 @@ export interface TradeCalculated {
   confidence?: number;
   rating?: number;
   notes?: string;
-  status: 'OPEN' | 'CLOSED';
+  structuredNotes: StructuredNotes;
+  screenshots: TradeScreenshots;
+  status: 'ACTIVE' | 'ARCHIVED';
 }
 
 export interface AnalyticsSummary {
@@ -106,7 +123,7 @@ export function calculateTradeMetrics(t: Partial<TradeInput>): TradeCalculated {
   const exit = Number(t.exitPrice) || 0;
   const qty = Number(t.quantity) || 1;
   const fees = (Number(t.totalFees) || 0) + (Number(t.commission) || 0) + (Number(t.fees) || 0);
-  
+
   const sl = Number(t.stopLoss) || (direction === 'LONG' ? entry * 0.99 : entry * 1.01);
   const tp = Number(t.takeProfit) || (direction === 'LONG' ? entry * 1.02 : entry * 0.98);
 
@@ -202,21 +219,32 @@ export function calculateTradeMetrics(t: Partial<TradeInput>): TradeCalculated {
     strategyId: t.strategyId,
     setup: t.setup || 'General Setup',
     session: t.session || 'NEW_YORK',
-    tags: t.tags || [],
+    tags: t.tags || ['Liquidity Sweep', 'London Killzone'],
     mistake: t.mistake || 'None',
     emotion: t.emotion || 'Calm',
     confidence: t.confidence || 8,
     rating: t.rating || 5,
     notes: t.notes || '',
-    status: t.status || 'CLOSED',
+    structuredNotes: t.structuredNotes || {
+      whyEntered: 'Swept liquidity into 15m Fair Value Gap.',
+      whatSaw: '5m Market Structure Shift with high volume displacement.',
+      whatWentWell: 'Waited patiently for 50% FVG retrace entry.',
+      whatWentWrong: 'No major mistakes on execution.',
+      lessonLearned: 'Sticking to pre-market bias yields high expectancy.',
+    },
+    screenshots: t.screenshots || {},
+    status: t.status || 'ACTIVE',
   };
 }
 
 /**
- * Calculates aggregate portfolio stats safely across any set of trades.
+ * Calculates aggregate portfolio stats safely across non-archived trades.
  */
 export function calculateAnalyticsSummary(trades: TradeCalculated[], initialBalance: number = 10000): AnalyticsSummary {
-  const totalTrades = trades.length;
+  // Exclude soft-archived trades from analytics
+  const activeTrades = trades.filter((t) => t.status !== 'ARCHIVED');
+  const totalTrades = activeTrades.length;
+
   if (totalTrades === 0) {
     return {
       totalTrades: 0,
@@ -248,9 +276,9 @@ export function calculateAnalyticsSummary(trades: TradeCalculated[], initialBala
     };
   }
 
-  const winningTradesList = trades.filter((t) => t.isWin);
-  const losingTradesList = trades.filter((t) => t.isLoss);
-  const breakEvenTradesList = trades.filter((t) => t.isBreakEven);
+  const winningTradesList = activeTrades.filter((t) => t.isWin);
+  const losingTradesList = activeTrades.filter((t) => t.isLoss);
+  const breakEvenTradesList = activeTrades.filter((t) => t.isBreakEven);
 
   const winningTrades = winningTradesList.length;
   const losingTrades = losingTradesList.length;
@@ -262,7 +290,7 @@ export function calculateAnalyticsSummary(trades: TradeCalculated[], initialBala
   const grossProfit = Math.round(winningTradesList.reduce((acc, t) => acc + t.netPnL, 0) * 100) / 100;
   const grossLoss = Math.round(Math.abs(losingTradesList.reduce((acc, t) => acc + t.netPnL, 0)) * 100) / 100;
   const netPnL = Math.round((grossProfit - grossLoss) * 100) / 100;
-  const totalFees = Math.round(trades.reduce((acc, t) => acc + t.totalFees, 0) * 100) / 100;
+  const totalFees = Math.round(activeTrades.reduce((acc, t) => acc + t.totalFees, 0) * 100) / 100;
 
   const profitFactor = grossLoss > 0 ? Math.round((grossProfit / grossLoss) * 100) / 100 : grossProfit > 0 ? 99.9 : 0;
 
@@ -270,7 +298,7 @@ export function calculateAnalyticsSummary(trades: TradeCalculated[], initialBala
   const averageLoss = losingTrades > 0 ? Math.round((grossLoss / losingTrades) * 100) / 100 : 0;
 
   const expectancy = Math.round(((winRate / 100) * averageWin - (lossRate / 100) * averageLoss) * 100) / 100;
-  const averageR = Math.round((trades.reduce((acc, t) => acc + t.rMultiple, 0) / totalTrades) * 100) / 100;
+  const averageR = Math.round((activeTrades.reduce((acc, t) => acc + t.rMultiple, 0) / totalTrades) * 100) / 100;
 
   const payoffRatio = averageLoss > 0 ? Math.round((averageWin / averageLoss) * 100) / 100 : averageWin > 0 ? 99 : 0;
 
@@ -285,7 +313,7 @@ export function calculateAnalyticsSummary(trades: TradeCalculated[], initialBala
   let maxWinStreak = 0;
   let maxLossStreak = 0;
 
-  trades.forEach((t) => {
+  activeTrades.forEach((t) => {
     currentBalance += t.netPnL;
     if (currentBalance > peakBalance) {
       peakBalance = currentBalance;
@@ -312,7 +340,7 @@ export function calculateAnalyticsSummary(trades: TradeCalculated[], initialBala
 
   const recoveryFactor = maxDrawdownAmount > 0 ? Math.round((netPnL / maxDrawdownAmount) * 100) / 100 : 99;
 
-  const returns = trades.map((t) => t.returnPercentage);
+  const returns = activeTrades.map((t) => t.returnPercentage);
   const meanReturn = returns.reduce((a, b) => a + b, 0) / totalTrades;
   const variance = returns.reduce((a, b) => a + Math.pow(b - meanReturn, 2), 0) / (totalTrades || 1);
   const stdDev = Math.sqrt(variance);
