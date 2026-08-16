@@ -2,222 +2,385 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import { FlaskConical, Play, Pause, SkipForward, RotateCcw } from 'lucide-react';
+import Link from 'next/link';
+import {
+  FlaskConical,
+  Play,
+  Pause,
+  SkipForward,
+  RotateCcw,
+  Plus,
+  ArrowRight,
+  History,
+  GitCompare,
+  Sliders,
+  TrendingUp,
+  TrendingDown,
+  CheckCircle2,
+  AlertCircle,
+  FileSpreadsheet,
+} from 'lucide-react';
+import {
+  DEFAULT_HISTORICAL_CANDLES,
+  CandleData,
+  evaluateCandleExecution,
+  BacktestTradeData,
+} from '@/lib/backtestEngine';
 
-export default function BacktestingPage() {
+export default function BacktestLabPage() {
+  const {
+    strategies,
+    playbooks,
+    rules,
+    backtestSessions,
+    addBacktestSession,
+    addBacktestTrade,
+    formatValue,
+  } = useApp();
+
+  const [activeSessionId, setActiveSessionId] = useState(backtestSessions[0]?.id || '');
+  const activeSession = backtestSessions.find((s) => s.id === activeSessionId) || backtestSessions[0];
+
+  // Replay State Machine
+  const [candles] = useState<CandleData[]>(DEFAULT_HISTORICAL_CANDLES);
+  const [currentCandleIndex, setCurrentCandleIndex] = useState(4); // Start at candle 5 to show initial trend
   const [isPlaying, setIsPlaying] = useState(false);
-  const [candleIndex, setCandleIndex] = useState(15);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1000);
-  const [symbol, setSymbol] = useState('NAS100');
-  const [timeframe, setTimeframe] = useState('15m');
-  const [simulatedTrades, setSimulatedTrades] = useState<any[]>([
-    { id: 'bt-1', type: 'BUY', entry: 19800, exit: 19910, lot: 1, pnl: 110, r: 2.2 },
-    { id: 'bt-2', type: 'SELL', entry: 19930, exit: 19980, lot: 1, pnl: -50, r: -1.0 },
-  ]);
+  const [replaySpeed, setReplaySpeed] = useState<number>(1);
 
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  // Order Panel Inputs
+  const currentCandle = candles[currentCandleIndex] || candles[candles.length - 1];
+  const [direction, setDirection] = useState<'LONG' | 'SHORT'>('LONG');
+  const [entryPrice, setEntryPrice] = useState(String(currentCandle.close));
+  const [stopLoss, setStopLoss] = useState(String(currentCandle.close * 0.99));
+  const [takeProfit, setTakeProfit] = useState(String(currentCandle.close * 1.02));
+  const [quantity, setQuantity] = useState('1.0');
 
+  // Sync entry price when candle steps
   useEffect(() => {
-    let timer: any;
+    if (currentCandle) {
+      setEntryPrice(String(currentCandle.close));
+      if (direction === 'LONG') {
+        setStopLoss((currentCandle.close * 0.99).toFixed(2));
+        setTakeProfit((currentCandle.close * 1.02).toFixed(2));
+      } else {
+        setStopLoss((currentCandle.close * 1.01).toFixed(2));
+        setTakeProfit((currentCandle.close * 0.98).toFixed(2));
+      }
+    }
+  }, [currentCandleIndex, direction]);
+
+  // Replay Auto-Play Effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
     if (isPlaying) {
-      timer = setInterval(() => {
-        setCandleIndex((prev) => (prev < 40 ? prev + 1 : 15));
-      }, playbackSpeed);
+      interval = setInterval(() => {
+        setCurrentCandleIndex((prev) => {
+          if (prev >= candles.length - 1) {
+            setIsPlaying(false);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 1000 / replaySpeed);
     }
-    return () => clearInterval(timer);
-  }, [isPlaying, playbackSpeed]);
+    return () => clearInterval(interval);
+  }, [isPlaying, replaySpeed, candles.length]);
 
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  const visibleCandles = candles.slice(0, currentCandleIndex + 1);
 
-    const width = canvas.width;
-    const height = canvas.height;
-    ctx.clearRect(0, 0, width, height);
-
-    ctx.fillStyle = '#111417';
-    ctx.fillRect(0, 0, width, height);
-
-    ctx.strokeStyle = '#262B30';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < width; x += 40) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-      ctx.stroke();
+  const handleStepForward = () => {
+    if (currentCandleIndex < candles.length - 1) {
+      setCurrentCandleIndex((prev) => prev + 1);
     }
-
-    const totalCandles = 40;
-    const candleWidth = width / totalCandles - 4;
-    let price = 19800;
-
-    for (let i = 0; i < candleIndex; i++) {
-      const x = (width / totalCandles) * i + 10;
-      const open = price;
-      const close = price + Math.sin(i * 0.7) * 25 + (i % 2 === 0 ? 12 : -15);
-      const high = Math.max(open, close) + 8;
-      const low = Math.min(open, close) - 8;
-      price = close;
-
-      const isGreen = close >= open;
-      ctx.strokeStyle = isGreen ? '#C8FF00' : '#EF4444';
-      ctx.fillStyle = isGreen ? '#C8FF00' : '#EF4444';
-
-      ctx.beginPath();
-      ctx.moveTo(x + candleWidth / 2, height - (high - 19700) * 1.2);
-      ctx.lineTo(x + candleWidth / 2, height - (low - 19700) * 1.2);
-      ctx.stroke();
-
-      const bodyTop = height - (Math.max(open, close) - 19700) * 1.2;
-      const bodyHeight = Math.max(4, Math.abs(close - open) * 1.2);
-      ctx.fillRect(x, bodyTop, candleWidth, bodyHeight);
-    }
-  }, [candleIndex]);
-
-  const handleSimulatedOrder = (type: 'BUY' | 'SELL') => {
-    const pnl = type === 'BUY' ? 140 : -45;
-    const r = type === 'BUY' ? 2.8 : -0.9;
-    setSimulatedTrades((prev) => [
-      { id: `bt-${Date.now()}`, type, entry: 19850, exit: type === 'BUY' ? 19990 : 19805, lot: 1, pnl, r },
-      ...prev,
-    ]);
   };
 
-  const totalSimPnL = simulatedTrades.reduce((acc, t) => acc + t.pnl, 0);
-  const simWins = simulatedTrades.filter((t) => t.pnl > 0).length;
-  const simWinRate = Math.round((simWins / (simulatedTrades.length || 1)) * 100);
+  const handleResetReplay = () => {
+    setIsPlaying(false);
+    setCurrentCandleIndex(4);
+  };
+
+  const handleExecuteSimulatedTrade = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeSession) return;
+
+    const entry = Number(entryPrice) || currentCandle.close;
+    const sl = Number(stopLoss) || (direction === 'LONG' ? entry * 0.99 : entry * 1.01);
+    const tp = Number(takeProfit) || (direction === 'LONG' ? entry * 1.02 : entry * 0.98);
+    const qty = Number(quantity) || 1.0;
+
+    // Evaluate against next candle
+    const nextCandle = candles[currentCandleIndex + 1] || currentCandle;
+    const evalRes = evaluateCandleExecution(direction, entry, sl, tp, qty, nextCandle);
+
+    addBacktestTrade(activeSession.id, {
+      symbol: activeSession.symbol,
+      direction,
+      entryPrice: entry,
+      exitPrice: evalRes.exitPrice,
+      quantity: qty,
+      stopLoss: sl,
+      takeProfit: tp,
+      entryTime: currentCandle.timestamp,
+      exitTime: nextCandle.timestamp,
+      grossPnL: evalRes.netPnL,
+      netPnL: evalRes.netPnL,
+      rMultiple: evalRes.rMultiple,
+      isWin: evalRes.netPnL > 0,
+      isLoss: evalRes.netPnL < 0,
+      mistake: 'None',
+      emotion: 'Calm',
+      notes: `Simulated ${direction} trade executed during replay.`,
+    });
+
+    // Step candle forward after order execution
+    handleStepForward();
+  };
+
+  // High/Low min max for SVG Canvas chart scaling
+  const maxPrice = Math.max(...visibleCandles.map((c) => c.high));
+  const minPrice = Math.min(...visibleCandles.map((c) => c.low));
+  const priceRange = maxPrice - minPrice || 1;
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-text-primary tracking-tight font-heading flex items-center gap-2">
-            <FlaskConical className="w-5 h-5 text-lime" /> Backtesting Lab
+            <FlaskConical className="w-5 h-5 text-lime" /> Backtesting Lab & Historical Replay
           </h1>
           <p className="text-xs text-text-secondary">
-            Replay historical price action candle-by-candle and test strategies in real time
+            Replay historical price action candle-by-candle without revealing future price data.
           </p>
         </div>
 
-        <div className="flex items-center gap-4 bg-bg-card p-3 rounded-xl border border-bg-border text-xs font-mono-num font-heading">
-          <div>
-            <span className="text-[10px] text-text-muted font-bold uppercase block">Sim P&L</span>
-            <span className={`font-black ${totalSimPnL >= 0 ? 'text-lime' : 'text-loss'}`}>
-              {totalSimPnL >= 0 ? '+' : ''}${totalSimPnL}
-            </span>
-          </div>
-          <div>
-            <span className="text-[10px] text-text-muted font-bold uppercase block">Win Rate</span>
-            <span className="font-black text-lime">{simWinRate}%</span>
-          </div>
-          <div>
-            <span className="text-[10px] text-text-muted font-bold uppercase block">Sim Trades</span>
-            <span className="font-black text-text-primary">{simulatedTrades.length}</span>
-          </div>
+        <div className="flex items-center gap-3 font-heading font-bold text-xs">
+          <Link href="/backtest/history" className="btn-secondary text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5">
+            <History className="w-4 h-4 text-lime" />
+            <span>Session History</span>
+          </Link>
+          <Link href="/backtest/compare" className="btn-secondary text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5">
+            <GitCompare className="w-4 h-4 text-lime" />
+            <span>Backtest vs Live</span>
+          </Link>
+          <Link href="/backtest/import" className="btn-primary-lime text-xs px-4 py-2 rounded-xl shadow-glow flex items-center gap-1.5 font-black">
+            <FileSpreadsheet className="w-4 h-4 stroke-[2.5]" />
+            <span>Import CSV Candles</span>
+          </Link>
         </div>
       </div>
 
+      {/* REPLAY CONTROL TOOLBAR */}
+      <div className="custom-card p-4 flex flex-wrap items-center justify-between gap-4 font-heading">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsPlaying(!isPlaying)}
+            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+              isPlaying ? 'bg-warning text-bg-main' : 'bg-lime text-bg-main shadow-glow'
+            }`}
+          >
+            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
+            <span>{isPlaying ? 'Pause Replay' : 'Start Replay'}</span>
+          </button>
+
+          <button
+            onClick={handleStepForward}
+            className="p-2 rounded-xl bg-bg-nested hover:bg-bg-card border border-bg-border text-text-primary"
+            title="Step 1 Candle Forward"
+          >
+            <SkipForward className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={handleResetReplay}
+            className="p-2 rounded-xl bg-bg-nested hover:bg-bg-card border border-bg-border text-text-muted hover:text-text-primary"
+            title="Reset Replay"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Speed Controls */}
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="text-text-muted font-bold mr-1">Speed:</span>
+          {[0.5, 1, 2, 5, 10].map((spd) => (
+            <button
+              key={spd}
+              onClick={() => setReplaySpeed(spd)}
+              className={`px-2.5 py-1 rounded-lg font-mono-num font-bold text-[11px] transition-all ${
+                replaySpeed === spd ? 'bg-lime text-bg-main' : 'bg-bg-nested text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              {spd}x
+            </button>
+          ))}
+        </div>
+
+        {/* Replay Candle Counter */}
+        <div className="text-xs font-mono-num text-text-muted">
+          Candle <strong className="text-lime">{currentCandleIndex + 1}</strong> / {candles.length} ({currentCandle?.timestamp})
+        </div>
+      </div>
+
+      {/* MAIN WORKSPACE GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8 custom-card p-5 space-y-4">
+        {/* CENTER: CANDLESTICK REPLAY CHART */}
+        <div className="lg:col-span-8 custom-card p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 font-heading">
-              <select
-                value={symbol}
-                onChange={(e) => setSymbol(e.target.value)}
-                className="bg-bg-main border border-bg-border rounded-lg px-3 py-1.5 text-xs text-text-primary font-bold"
-              >
-                <option value="NAS100">NAS100 Index</option>
-                <option value="XAUUSD">XAUUSD Gold</option>
-                <option value="EURUSD">EURUSD Forex</option>
-              </select>
-              <select
-                value={timeframe}
-                onChange={(e) => setTimeframe(e.target.value)}
-                className="bg-bg-main border border-bg-border rounded-lg px-3 py-1.5 text-xs text-text-secondary"
-              >
-                <option value="15m">15m Timeframe</option>
-                <option value="5m">5m Timeframe</option>
-                <option value="1h">1h Timeframe</option>
-              </select>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-black text-text-primary font-heading tracking-tight">{activeSession?.symbol || 'XAUUSD'}</span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-lime/10 text-lime font-mono-num">
+                {activeSession?.timeframe || '15m'} REPLAY
+              </span>
             </div>
-
-            <div className="flex items-center gap-2 bg-bg-main p-1.5 rounded-xl border border-bg-border">
-              <button
-                onClick={() => setCandleIndex(10)}
-                className="p-1.5 text-text-muted hover:text-text-primary rounded"
-                title="Reset Replay"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setIsPlaying(!isPlaying)}
-                className={`p-2 rounded-lg font-bold transition-all ${
-                  isPlaying ? 'bg-warning text-bg-main' : 'btn-primary-lime'
-                }`}
-              >
-                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              </button>
-              <button
-                onClick={() => setCandleIndex((prev) => Math.min(40, prev + 1))}
-                className="p-1.5 text-text-muted hover:text-text-primary rounded"
-                title="Step Next Candle"
-              >
-                <SkipForward className="w-4 h-4" />
-              </button>
-              <select
-                value={playbackSpeed}
-                onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
-                className="bg-transparent text-xs text-text-secondary focus:outline-none pr-1"
-              >
-                <option value={1500} className="bg-bg-card">0.5x Speed</option>
-                <option value={1000} className="bg-bg-card">1.0x Speed</option>
-                <option value={500} className="bg-bg-card">2.0x Speed</option>
-              </select>
-            </div>
+            <span className="text-xs text-text-muted font-mono-num">
+              Price: <strong className="text-lime">${currentCandle?.close.toFixed(2)}</strong>
+            </span>
           </div>
 
-          <div className="w-full h-80 bg-bg-surface rounded-xl border border-bg-border overflow-hidden">
-            <canvas ref={canvasRef} width={700} height={320} className="w-full h-full object-cover" />
-          </div>
+          {/* SVG CANDLESTICK CANVAS */}
+          <div className="h-80 w-full bg-bg-main rounded-xl border border-bg-border p-4 relative overflow-hidden flex items-end">
+            <svg className="w-full h-full overflow-visible">
+              {visibleCandles.map((c, idx) => {
+                const x = (idx / (visibleCandles.length || 1)) * 100 + 2;
+                const isGreen = c.close >= c.open;
+                const highY = 100 - ((c.high - minPrice) / priceRange) * 80 - 10;
+                const lowY = 100 - ((c.low - minPrice) / priceRange) * 80 - 10;
+                const openY = 100 - ((c.open - minPrice) / priceRange) * 80 - 10;
+                const closeY = 100 - ((c.close - minPrice) / priceRange) * 80 - 10;
 
-          <div className="flex items-center gap-4 pt-2 font-heading">
-            <button
-              onClick={() => handleSimulatedOrder('BUY')}
-              className="flex-1 py-3 rounded-xl btn-primary-lime font-black text-xs shadow"
-            >
-              SIMULATE BUY / LONG (1 Lot)
-            </button>
-            <button
-              onClick={() => handleSimulatedOrder('SELL')}
-              className="flex-1 py-3 rounded-xl bg-loss hover:opacity-90 text-white font-black text-xs shadow"
-            >
-              SIMULATE SELL / SHORT (1 Lot)
-            </button>
+                const topY = Math.min(openY, closeY);
+                const bodyHeight = Math.max(2, Math.abs(closeY - openY));
+
+                return (
+                  <g key={idx}>
+                    {/* Wick */}
+                    <line x1={`${x}%`} y1={`${highY}%`} x2={`${x}%`} y2={`${lowY}%`} stroke={isGreen ? '#C8FF00' : '#EF4444'} strokeWidth="1.5" />
+                    {/* Body */}
+                    <rect
+                      x={`calc(${x}% - 6px)`}
+                      y={`${topY}%`}
+                      width="12"
+                      height={`${bodyHeight}%`}
+                      fill={isGreen ? '#C8FF00' : '#EF4444'}
+                      rx="2"
+                    />
+                  </g>
+                );
+              })}
+            </svg>
           </div>
         </div>
 
-        <div className="lg:col-span-4 custom-card p-5 flex flex-col justify-between space-y-4">
-          <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider font-heading">Simulated Session Log</h3>
-          <div className="flex-1 overflow-y-auto space-y-2 max-h-80 font-mono-num">
-            {simulatedTrades.map((t) => (
-              <div key={t.id} className="p-3 bg-bg-nested rounded-lg border border-bg-border flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${t.type === 'BUY' ? 'bg-lime/10 text-lime' : 'bg-loss/10 text-loss'}`}>
-                    {t.type}
-                  </span>
-                  <span className="text-text-secondary">{t.entry} → {t.exit}</span>
-                </div>
-                <div className="text-right">
-                  <span className={`font-bold block ${t.pnl >= 0 ? 'text-lime' : 'text-loss'}`}>
-                    {t.pnl >= 0 ? '+' : ''}${t.pnl}
-                  </span>
-                  <span className="text-[10px] text-lime block">{t.r >= 0 ? '+' : ''}{t.r}R</span>
-                </div>
-              </div>
-            ))}
-          </div>
+        {/* RIGHT: SIMULATED ORDER PANEL */}
+        <div className="lg:col-span-4 custom-card p-6 space-y-4">
+          <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider font-heading">Simulated Order Entry</h3>
+
+          <form onSubmit={handleExecuteSimulatedTrade} className="space-y-4 text-xs font-mono-num">
+            {/* Direction Toggle */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setDirection('LONG')}
+                className={`py-2 rounded-xl font-bold font-heading transition-all ${
+                  direction === 'LONG' ? 'bg-lime text-bg-main shadow-glow' : 'bg-bg-nested text-text-muted'
+                }`}
+              >
+                BUY / LONG
+              </button>
+              <button
+                type="button"
+                onClick={() => setDirection('SHORT')}
+                className={`py-2 rounded-xl font-bold font-heading transition-all ${
+                  direction === 'SHORT' ? 'bg-loss text-white' : 'bg-bg-nested text-text-muted'
+                }`}
+              >
+                SELL / SHORT
+              </button>
+            </div>
+
+            <div>
+              <label className="text-text-secondary font-bold block mb-1">Entry Price</label>
+              <input
+                type="number"
+                step="any"
+                value={entryPrice}
+                onChange={(e) => setEntryPrice(e.target.value)}
+                className="w-full bg-bg-main border border-bg-border rounded-xl px-3 py-2 text-text-primary focus:border-lime focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="text-text-secondary font-bold block mb-1">Stop Loss (SL)</label>
+              <input
+                type="number"
+                step="any"
+                value={stopLoss}
+                onChange={(e) => setStopLoss(e.target.value)}
+                className="w-full bg-bg-main border border-bg-border rounded-xl px-3 py-2 text-loss font-bold focus:border-lime focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="text-text-secondary font-bold block mb-1">Take Profit (TP)</label>
+              <input
+                type="number"
+                step="any"
+                value={takeProfit}
+                onChange={(e) => setTakeProfit(e.target.value)}
+                className="w-full bg-bg-main border border-bg-border rounded-xl px-3 py-2 text-lime font-bold focus:border-lime focus:outline-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full btn-primary-lime py-3 rounded-xl shadow-glow font-heading font-black text-xs uppercase tracking-wider"
+            >
+              Execute Backtest {direction} Trade
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* BOTTOM: BACKTEST TRADES LOG */}
+      <div className="custom-card p-6 space-y-4 font-mono-num">
+        <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider font-heading">
+          Simulated Backtest Trades Log ({activeSession?.trades.length || 0})
+        </h3>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-bg-border text-text-muted uppercase text-[10px] font-heading font-bold">
+                <th className="py-2.5 px-3">Date</th>
+                <th className="py-2.5 px-3">Symbol</th>
+                <th className="py-2.5 px-3">Direction</th>
+                <th className="py-2.5 px-3">Entry</th>
+                <th className="py-2.5 px-3">Exit</th>
+                <th className="py-2.5 px-3">R-Multiple</th>
+                <th className="py-2.5 px-3 text-right">Net P&L</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-bg-border">
+              {activeSession?.trades.map((t) => (
+                <tr key={t.id} className="hover:bg-bg-nested transition-colors">
+                  <td className="py-3 px-3 text-text-muted">{t.entryTime}</td>
+                  <td className="py-3 px-3 font-bold text-text-primary font-heading">{t.symbol}</td>
+                  <td className="py-3 px-3">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${t.direction === 'LONG' ? 'text-lime bg-lime/10' : 'text-loss bg-loss/10'}`}>
+                      {t.direction}
+                    </span>
+                  </td>
+                  <td className="py-3 px-3 text-text-secondary">${t.entryPrice.toFixed(2)}</td>
+                  <td className="py-3 px-3 text-text-secondary">${t.exitPrice.toFixed(2)}</td>
+                  <td className="py-3 px-3 font-bold text-lime">+{t.rMultiple}R</td>
+                  <td className={`py-3 px-3 text-right font-bold ${t.netPnL >= 0 ? 'text-lime' : 'text-loss'}`}>
+                    {formatValue(t.netPnL)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

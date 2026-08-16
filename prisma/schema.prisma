@@ -8,19 +8,20 @@ generator client {
 }
 
 model User {
-  id           String         @id @default(uuid())
-  email        String         @unique
-  name         String
-  passwordHash String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  accounts     Account[]
-  trades       Trade[]
-  strategies   Strategy[]
-  playbooks    Playbook[]
-  rules        Rule[]
-  journal      JournalEntry[]
-  notes        Note[]
+  id               String            @id @default(uuid())
+  email            String            @unique
+  name             String
+  passwordHash     String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  accounts         Account[]
+  trades           Trade[]
+  strategies       Strategy[]
+  playbooks        Playbook[]
+  rules            Rule[]
+  journal          JournalEntry[]
+  notes            Note[]
+  backtestSessions BacktestSession[]
 
   @@index([email])
 }
@@ -32,7 +33,7 @@ model Account {
   name                           String
   broker                         String
   firmName                       String   @default("FTMO")
-  accountType                    String   @default("FUNDED") // PERSONAL, PROP_FIRM, EVALUATION, FUNDED, INSTANT_FUNDING
+  accountType                    String   @default("FUNDED") // PERSONAL, PROP_FIRM, EVALUATION, FUNDED, INSTANT_FUNDING, DEMO
   startingBalance                Float
   currentBalance                 Float
   currency                       String   @default("USD")
@@ -60,45 +61,47 @@ model Account {
 }
 
 model Strategy {
-  id          String     @id @default(uuid())
-  userId      String
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  description String?
-  market      String?
-  timeframe   String?
-  session     String?
-  status      String     @default("ACTIVE") // ACTIVE, PAUSED, ARCHIVED
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  playbooks   Playbook[]
-  rules       Rule[]
-  trades      Trade[]
+  id               String            @id @default(uuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  description      String?
+  market           String?
+  timeframe        String?
+  session          String?
+  status           String            @default("ACTIVE") // ACTIVE, PAUSED, ARCHIVED
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  playbooks        Playbook[]
+  rules            Rule[]
+  trades           Trade[]
+  backtestSessions BacktestSession[]
 
   @@index([userId])
 }
 
 model Playbook {
-  id            String   @id @default(uuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  strategyId    String
-  strategy      Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
-  name          String
-  description   String?
-  market        String?
-  symbols       String?
-  sessions      String?
-  timeframes    String?
-  entryModel    String?
-  stopModel     String?
-  targetModel   String?
-  minRiskReward Float    @default(2.0)
-  status        String   @default("ACTIVE") // ACTIVE, PAUSED, ARCHIVED
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  rules         Rule[]
-  trades        Trade[]
+  id               String            @id @default(uuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  strategyId       String
+  strategy         Strategy          @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  name             String
+  description      String?
+  market           String?
+  symbols          String?
+  sessions         String?
+  timeframes       String?
+  entryModel       String?
+  stopModel        String?
+  targetModel      String?
+  minRiskReward    Float             @default(2.0)
+  status           String            @default("ACTIVE") // ACTIVE, PAUSED, ARCHIVED
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  rules            Rule[]
+  trades           Trade[]
+  backtestSessions BacktestSession[]
 
   @@index([userId])
   @@index([strategyId])
@@ -227,4 +230,77 @@ model Note {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+// Phase 6 Backtesting & Historical Trade Replay Models
+model BacktestSession {
+  id                 String          @id @default(uuid())
+  userId             String
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  strategyId         String?
+  strategy           Strategy?       @relation(fields: [strategyId], references: [id], onDelete: SetNull)
+  playbookId         String?
+  playbook           Playbook?       @relation(fields: [playbookId], references: [id], onDelete: SetNull)
+  symbol             String          @default("XAUUSD")
+  timeframe          String          @default("15m")
+  startDate          DateTime        @default(now())
+  endDate            DateTime        @default(now())
+  startingBalance    Float           @default(10000)
+  currentBalance     Float           @default(10000)
+  riskModel          String          @default("PERCENTAGE") // FIXED_LOT, PERCENTAGE
+  riskPercentPerTrade Float          @default(1.0)
+  status             String          @default("IN_PROGRESS") // DRAFT, IN_PROGRESS, COMPLETED, ARCHIVED
+  notes              String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  trades             BacktestTrade[]
+
+  @@index([userId])
+  @@index([strategyId])
+  @@index([playbookId])
+}
+
+model BacktestTrade {
+  id              String          @id @default(uuid())
+  sessionId       String
+  session         BacktestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  symbol          String
+  direction       String
+  entryPrice      Float
+  exitPrice       Float
+  quantity        Float
+  stopLoss        Float?
+  takeProfit      Float?
+  entryTime       DateTime
+  exitTime        DateTime
+  grossPnL        Float           @default(0)
+  fees            Float           @default(0)
+  netPnL          Float           @default(0)
+  rMultiple       Float           @default(0)
+  isWin           Boolean         @default(false)
+  isLoss          Boolean         @default(false)
+  mistake         String?
+  emotion         String?
+  notes           String?
+  ruleChecklist   String?         // JSON encoded rule adherence
+  createdAt       DateTime        @default(now())
+
+  @@index([sessionId])
+}
+
+model HistoricalCandle {
+  id        String   @id @default(uuid())
+  symbol    String
+  timeframe String   @default("15m")
+  timestamp DateTime
+  open      Float
+  high      Float
+  low       Float
+  close     Float
+  volume    Float    @default(0)
+  source    String   @default("IMPORTED")
+
+  @@unique([symbol, timeframe, timestamp])
+  @@index([symbol, timeframe])
 }

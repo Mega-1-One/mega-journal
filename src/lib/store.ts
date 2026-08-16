@@ -1,4 +1,5 @@
 import { TradeInput, calculateTradeMetrics, TradeCalculated } from './calculations';
+import { BacktestSessionData } from './backtestEngine';
 
 export interface AccountData {
   id: string;
@@ -152,6 +153,75 @@ export const DEMO_ACCOUNTS: AccountData[] = [
     challengeDeadline: new Date(Date.now() + 86400000 * 50).toISOString(),
     currentPhase: 'Phase 1',
     status: 'ACTIVE',
+  },
+];
+
+export const DEMO_BACKTEST_SESSIONS: BacktestSessionData[] = [
+  {
+    id: 'bt-sess-1',
+    name: 'London Gold Liquidity Sweep Backtest',
+    strategyId: 'strat-1',
+    playbookId: 'pb-1',
+    symbol: 'XAUUSD',
+    timeframe: '15m',
+    startDate: '2026-08-01',
+    endDate: '2026-08-15',
+    startingBalance: 10000,
+    currentBalance: 12450,
+    riskModel: 'PERCENTAGE',
+    riskPercentPerTrade: 1.0,
+    status: 'COMPLETED',
+    notes: 'Backtest testing 15m Liquidity Sweeps into Asian high/lows.',
+    trades: [
+      {
+        id: 'bt-trd-1',
+        sessionId: 'bt-sess-1',
+        symbol: 'XAUUSD',
+        direction: 'LONG',
+        entryPrice: 2413.5,
+        exitPrice: 2434.2,
+        quantity: 1.0,
+        stopLoss: 2409.8,
+        takeProfit: 2435.0,
+        entryTime: '2026-08-01 08:15',
+        exitTime: '2026-08-01 09:30',
+        grossPnL: 2070.0,
+        fees: 9.0,
+        netPnL: 2061.0,
+        rMultiple: 5.58,
+        isWin: true,
+        isLoss: false,
+        mistake: 'None',
+        emotion: 'Calm',
+        notes: 'Hit TP after 5m MSS displacement.',
+        rulesFollowedCount: 5,
+        rulesTotalCount: 5,
+      },
+      {
+        id: 'bt-trd-2',
+        sessionId: 'bt-sess-1',
+        symbol: 'XAUUSD',
+        direction: 'SHORT',
+        entryPrice: 2440.8,
+        exitPrice: 2441.5,
+        quantity: 1.0,
+        stopLoss: 2441.5,
+        takeProfit: 2420.0,
+        entryTime: '2026-08-01 10:15',
+        exitTime: '2026-08-01 10:15',
+        grossPnL: -70.0,
+        fees: 9.0,
+        netPnL: -79.0,
+        rMultiple: -1.0,
+        isWin: false,
+        isLoss: true,
+        mistake: 'None',
+        emotion: 'Calm',
+        notes: 'Stopped out cleanly at SL.',
+        rulesFollowedCount: 5,
+        rulesTotalCount: 5,
+      },
+    ],
   },
 ];
 
