@@ -26,20 +26,35 @@ model User {
 }
 
 model Account {
-  id              String   @id @default(uuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name            String
-  broker          String
-  accountType     String   // PERSONAL, FUNDED, EVALUATION, DEMO
-  startingBalance Float
-  currentBalance  Float
-  currency        String   @default("USD")
-  status          String   @default("ACTIVE") // ACTIVE, ARCHIVED
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  trades          Trade[]
+  id                             String   @id @default(uuid())
+  userId                         String
+  user                           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                           String
+  broker                         String
+  firmName                       String   @default("FTMO")
+  accountType                    String   @default("FUNDED") // PERSONAL, PROP_FIRM, EVALUATION, FUNDED, INSTANT_FUNDING
+  startingBalance                Float
+  currentBalance                 Float
+  currency                       String   @default("USD")
+  profitTarget                   Float    @default(1000)
+  profitTargetPercent            Float    @default(10.0)
+  maxDailyLossLimit               Float    @default(500)
+  maxTotalLossLimit              Float    @default(1000)
+  drawdownType                   String   @default("TRAILING") // STATIC, TRAILING, EQUITY_BASED, BALANCE_BASED
+  dailyLossCalcMethod            String   @default("STARTING_DAY_BALANCE") // STARTING_DAY_BALANCE, STATIC_EQUITY
+  minTradingDays                 Int      @default(5)
+  maxTradingDays                 Int      @default(30)
+  tradingDaysCompleted           Int      @default(0)
+  consistencyRequirementPercent Float    @default(0.0)
+  payoutThreshold                Float    @default(0.0)
+  challengeStartDate             DateTime @default(now())
+  challengeDeadline              DateTime?
+  currentPhase                   String   @default("Phase 1") // Phase 1, Phase 2, Funded
+  status                         String   @default("ACTIVE") // ACTIVE, PASSED, FAILED, FUNDED, SUSPENDED, ARCHIVED
+  notes                          String?
+  createdAt                      DateTime @default(now())
+  updatedAt                      DateTime @updatedAt
+  trades                         Trade[]
 
   @@index([userId])
 }

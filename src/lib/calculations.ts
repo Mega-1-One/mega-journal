@@ -1,5 +1,7 @@
 // Centralized Financial Calculations Engine for MEGA JOURNAL / MegaLedger
 
+import { AccountData } from './store';
+
 export interface StructuredNotes {
   whyEntered?: string;
   whatSaw?: string;
@@ -159,6 +161,43 @@ export interface WeekdayStat {
   winRate: number;
   netPnL: number;
   averageR: number;
+}
+
+export interface PropRiskStatus {
+  accountName: string;
+  overallStatus: 'SAFE' | 'CAUTION' | 'HIGH_RISK' | 'BREACH';
+  statusMessage: string;
+  todayPnL: number;
+  dailyLossLimit: number;
+  dailyLossUsedPercent: number;
+  dailyLossRemaining: number;
+  peakBalance: number;
+  currentBalance: number;
+  currentDrawdown: number;
+  maxTotalLossLimit: number;
+  drawdownUsedPercent: number;
+  drawdownRemaining: number;
+  profitTarget: number;
+  profitTargetProgressPercent: number;
+  profitTargetRemaining: number;
+  tradingDaysCompleted: number;
+  minTradingDays: number;
+  daysRemainingInChallenge: number;
+  payoutThreshold: number;
+  isPayoutEligible: boolean;
+}
+
+export interface PreTradeRiskCheck {
+  estimatedRiskAmount: number;
+  estimatedRiskPercent: number;
+  impactOnDailyLossPercent: number;
+  impactOnDrawdownPercent: number;
+  remainingDailyCapacityAfterTrade: number;
+  remainingDrawdownCapacityAfterTrade: number;
+  hasWarning: boolean;
+  warningMessage?: string;
+  hasBreach: boolean;
+  breachMessage?: string;
 }
 
 /**
@@ -543,7 +582,6 @@ export function calculateWeekdayPerformance(trades: TradeCalculated[]): WeekdayS
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
   return days.map((dayName, idx) => {
-    // 0 is Sun, 1 is Mon
     const targetDayIndex = idx + 1;
     const dayTrades = activeTrades.filter((t) => new Date(t.entryTime).getDay() === targetDayIndex);
     const summary = calculateAnalyticsSummary(dayTrades);
@@ -555,4 +593,143 @@ export function calculateWeekdayPerformance(trades: TradeCalculated[]): WeekdayS
       averageR: summary.averageR,
     };
   });
+}
+
+/**
+ * Phase 5 Prop Firm Account Risk & Breach Status Calculation
+ */
+export function calculateAccountRiskStatus(account: AccountData, trades: TradeCalculated[]): PropRiskStatus {
+  const accountTrades = trades.filter((t) => t.account === account.name && t.status !== 'ARCHIVED');
+
+  // Today's P&L
+  const todayStr = new Date().toISOString().substring(0, 10);
+  const todayTrades = accountTrades.filter((t) => new Date(t.entryTime).toISOString().substring(0, 10) === todayStr);
+  const todayPnL = Math.round(todayTrades.reduce((acc, t) => acc + t.netPnL, 0) * 100) / 100;
+
+  // Daily Loss Capacity & %
+  const dailyLossLimit = account.maxDailyLossLimit || 500;
+  const todayLossUsed = todayPnL < 0 ? Math.abs(todayPnL) : 0;
+  const dailyLossUsedPercent = Math.min(100, Math.round((todayLossUsed / dailyLossLimit) * 100));
+  const dailyLossRemaining = Math.max(0, Math.round((dailyLossLimit - todayLossUsed) * 100) / 100);
+
+  // Peak Balance & Trailing Drawdown
+  let runningBal = account.startingBalance;
+  let peakBal = account.startingBalance;
+  accountTrades.forEach((t) => {
+    runningBal += t.netPnL;
+    if (runningBal > peakBal) peakBal = runningBal;
+  });
+
+  const currentBal = account.currentBalance || runningBal;
+  const currentDrawdown = Math.max(0, Math.round((peakBal - currentBal) * 100) / 100);
+
+  const maxTotalLossLimit = account.maxTotalLossLimit || 1000;
+  const drawdownUsedPercent = Math.min(100, Math.round((currentDrawdown / maxTotalLossLimit) * 100));
+  const drawdownRemaining = Math.max(0, Math.round((maxTotalLossLimit - currentDrawdown) * 100) / 100);
+
+  // Profit Target
+  const profitTarget = account.profitTarget || 1000;
+  const currentProfit = Math.max(0, currentBal - account.startingBalance);
+  const profitTargetProgressPercent = Math.min(100, Math.round((currentProfit / profitTarget) * 100));
+  const profitTargetRemaining = Math.max(0, Math.round((profitTarget - currentProfit) * 100) / 100);
+
+  // Trading Days
+  const uniqueDays = new Set(accountTrades.map((t) => new Date(t.entryTime).toISOString().substring(0, 10))).size;
+  const minTradingDays = account.minTradingDays || 5;
+
+  // Deadline
+  let daysRemainingInChallenge = 30;
+  if (account.challengeDeadline) {
+    const diffMs = new Date(account.challengeDeadline).getTime() - Date.now();
+    daysRemainingInChallenge = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  }
+
+  // Risk Radar Status
+  let overallStatus: 'SAFE' | 'CAUTION' | 'HIGH_RISK' | 'BREACH' = 'SAFE';
+  let statusMessage = 'Your account is within all configured risk limits.';
+
+  if (todayLossUsed >= dailyLossLimit || currentDrawdown >= maxTotalLossLimit) {
+    overallStatus = 'BREACH';
+    statusMessage = 'BREACH DETECTED: A configured account risk limit has been exceeded.';
+  } else if (dailyLossUsedPercent >= 80 || drawdownUsedPercent >= 80) {
+    overallStatus = 'HIGH_RISK';
+    statusMessage = 'HIGH RISK: Your account is approaching a potential rule violation.';
+  } else if (dailyLossUsedPercent >= 50 || drawdownUsedPercent >= 50) {
+    overallStatus = 'CAUTION';
+    statusMessage = 'CAUTION: You have used more than 50% of your daily/drawdown risk capacity.';
+  }
+
+  return {
+    accountName: account.name,
+    overallStatus,
+    statusMessage,
+    todayPnL,
+    dailyLossLimit,
+    dailyLossUsedPercent,
+    dailyLossRemaining,
+    peakBalance: Math.round(peakBal * 100) / 100,
+    currentBalance: Math.round(currentBal * 100) / 100,
+    currentDrawdown,
+    maxTotalLossLimit,
+    drawdownUsedPercent,
+    drawdownRemaining,
+    profitTarget,
+    profitTargetProgressPercent,
+    profitTargetRemaining,
+    tradingDaysCompleted: uniqueDays,
+    minTradingDays,
+    daysRemainingInChallenge,
+    payoutThreshold: account.payoutThreshold || 11000,
+    isPayoutEligible: currentBal >= (account.payoutThreshold || 11000) && uniqueDays >= minTradingDays,
+  };
+}
+
+/**
+ * Phase 5 Pre-Trade Risk Checker
+ */
+export function calculatePreTradeRisk(
+  account: AccountData,
+  entryPrice: number,
+  stopLoss: number,
+  quantity: number,
+  direction: 'LONG' | 'SHORT'
+): PreTradeRiskCheck {
+  const riskPerUnit = direction === 'LONG' ? Math.max(0, entryPrice - stopLoss) : Math.max(0, stopLoss - entryPrice);
+  const estimatedRiskAmount = Math.round(riskPerUnit * quantity * 100) / 100;
+  const estimatedRiskPercent = Math.round((estimatedRiskAmount / account.startingBalance) * 1000) / 10;
+
+  const dailyLossLimit = account.maxDailyLossLimit || 500;
+  const maxTotalLossLimit = account.maxTotalLossLimit || 1000;
+
+  const impactOnDailyLossPercent = Math.round((estimatedRiskAmount / dailyLossLimit) * 100);
+  const impactOnDrawdownPercent = Math.round((estimatedRiskAmount / maxTotalLossLimit) * 100);
+
+  const remainingDailyCapacityAfterTrade = Math.max(0, dailyLossLimit - estimatedRiskAmount);
+  const remainingDrawdownCapacityAfterTrade = Math.max(0, maxTotalLossLimit - estimatedRiskAmount);
+
+  let hasWarning = false;
+  let warningMessage = '';
+  let hasBreach = false;
+  let breachMessage = '';
+
+  if (estimatedRiskAmount >= dailyLossLimit || estimatedRiskAmount >= maxTotalLossLimit) {
+    hasBreach = true;
+    breachMessage = `Proposed trade risk ($${estimatedRiskAmount}) would breach your account limits!`;
+  } else if (impactOnDailyLossPercent >= 50 || impactOnDrawdownPercent >= 50) {
+    hasWarning = true;
+    warningMessage = `Proposed trade consumes ${impactOnDailyLossPercent}% of your daily loss capacity.`;
+  }
+
+  return {
+    estimatedRiskAmount,
+    estimatedRiskPercent,
+    impactOnDailyLossPercent,
+    impactOnDrawdownPercent,
+    remainingDailyCapacityAfterTrade,
+    remainingDrawdownCapacityAfterTrade,
+    hasWarning,
+    warningMessage,
+    hasBreach,
+    breachMessage,
+  };
 }

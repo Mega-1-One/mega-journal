@@ -4,11 +4,27 @@ export interface AccountData {
   id: string;
   name: string;
   broker: string;
-  accountType: 'PERSONAL' | 'FUNDED' | 'EVALUATION' | 'DEMO';
+  firmName?: string;
+  accountType: 'PERSONAL' | 'PROP_FIRM' | 'EVALUATION' | 'FUNDED' | 'INSTANT_FUNDING' | 'DEMO';
   startingBalance: number;
   currentBalance: number;
   currency: string;
-  status: 'ACTIVE' | 'ARCHIVED';
+  profitTarget: number;
+  profitTargetPercent: number;
+  maxDailyLossLimit: number;
+  maxTotalLossLimit: number;
+  drawdownType: 'STATIC' | 'TRAILING' | 'EQUITY_BASED' | 'BALANCE_BASED';
+  dailyLossCalcMethod: 'STARTING_DAY_BALANCE' | 'STATIC_EQUITY';
+  minTradingDays: number;
+  maxTradingDays: number;
+  tradingDaysCompleted: number;
+  consistencyRequirementPercent: number;
+  payoutThreshold: number;
+  challengeStartDate: string;
+  challengeDeadline?: string;
+  currentPhase: 'Phase 1' | 'Phase 2' | 'Funded';
+  status: 'ACTIVE' | 'PASSED' | 'FAILED' | 'FUNDED' | 'SUSPENDED' | 'ARCHIVED';
+  notes?: string;
 }
 
 export interface PropFirmData {
@@ -91,20 +107,50 @@ export const DEMO_ACCOUNTS: AccountData[] = [
     id: 'acc-1',
     name: 'MEGA1 $10K Prop Account',
     broker: 'FTMO / MetaTrader 5',
+    firmName: 'FTMO',
     accountType: 'FUNDED',
     startingBalance: 10000,
     currentBalance: 11850,
     currency: 'USD',
+    profitTarget: 1000,
+    profitTargetPercent: 10.0,
+    maxDailyLossLimit: 500,
+    maxTotalLossLimit: 1000,
+    drawdownType: 'TRAILING',
+    dailyLossCalcMethod: 'STARTING_DAY_BALANCE',
+    minTradingDays: 5,
+    maxTradingDays: 30,
+    tradingDaysCompleted: 8,
+    consistencyRequirementPercent: 0.0,
+    payoutThreshold: 11000,
+    challengeStartDate: new Date(Date.now() - 86400000 * 15).toISOString(),
+    challengeDeadline: new Date(Date.now() + 86400000 * 15).toISOString(),
+    currentPhase: 'Funded',
     status: 'ACTIVE',
   },
   {
     id: 'acc-2',
     name: 'Apex $50K Futures Account',
     broker: 'Tradovate / NinjaTrader',
+    firmName: 'Apex Trader Funding',
     accountType: 'EVALUATION',
     startingBalance: 50000,
     currentBalance: 53200,
     currency: 'USD',
+    profitTarget: 3000,
+    profitTargetPercent: 6.0,
+    maxDailyLossLimit: 1250,
+    maxTotalLossLimit: 2500,
+    drawdownType: 'TRAILING',
+    dailyLossCalcMethod: 'STATIC_EQUITY',
+    minTradingDays: 7,
+    maxTradingDays: 60,
+    tradingDaysCompleted: 5,
+    consistencyRequirementPercent: 30.0,
+    payoutThreshold: 52600,
+    challengeStartDate: new Date(Date.now() - 86400000 * 10).toISOString(),
+    challengeDeadline: new Date(Date.now() + 86400000 * 50).toISOString(),
+    currentPhase: 'Phase 1',
     status: 'ACTIVE',
   },
 ];
