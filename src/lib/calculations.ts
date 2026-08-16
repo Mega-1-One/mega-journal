@@ -1,4 +1,4 @@
-// Centralized Financial Calculations Engine for MEGA JOURNAL / MegaLedger
+// Centralized Financial Calculations Engine for MEGA JOURNAL
 
 import { AccountData } from './store';
 
