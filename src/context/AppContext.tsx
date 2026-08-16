@@ -125,8 +125,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isAddTradeOpen, setIsAddTradeOpen] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [theme, setTheme] = useState('midnight');
+  const [theme, setTheme] = useState('dark');
   const [isPrivacyMode, setIsPrivacyMode] = useState(false);
+
+  // Load UI preferences from localStorage on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('mj_theme');
+    if (savedTheme) setTheme(savedTheme);
+    const savedPrivacy = localStorage.getItem('mj_privacy');
+    if (savedPrivacy === 'true') setIsPrivacyMode(true);
+  }, []);
+
+  // Sync theme to document element class (dark vs light)
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'light') {
+      root.classList.add('light');
+      root.classList.remove('dark');
+    } else {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    }
+    localStorage.setItem('mj_theme', theme);
+  }, [theme]);
+
+  // Sync privacy mode to localStorage
+  useEffect(() => {
+    localStorage.setItem('mj_privacy', isPrivacyMode ? 'true' : 'false');
+  }, [isPrivacyMode]);
 
   // Keyboard Shortcut 'N' Handler
   useEffect(() => {
@@ -372,6 +398,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const adherenceComparison = calculateAdherencePerformance(filteredTrades);
 
   const formatValue = (val: number, isPercent: boolean = false, risk?: number): string => {
+    if (isPrivacyMode && !isPercent) return '$••••••';
     if (isPercent) return `${val > 0 ? '+' : ''}${val.toFixed(2)}%`;
     const formatted = Math.abs(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     if (val > 0) return `+$${formatted}`;

@@ -118,11 +118,11 @@ export function Topbar() {
 
         {/* Theme Switcher */}
         <button
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
           className="p-2 rounded-xl bg-bg-main hover:bg-bg-nested text-text-muted hover:text-text-primary border border-bg-border transition-colors"
           title="Toggle Dark / Light Theme"
         >
-          {theme === 'dark' ? <Sun className="w-4 h-4 text-lime" /> : <Moon className="w-4 h-4 text-text-primary" />}
+          {theme === 'light' ? <Moon className="w-4 h-4 text-text-primary" /> : <Sun className="w-4 h-4 text-lime" />}
         </button>
 
         {/* Primary Action Button (#C8FF00 background, #0B0D0F text, N shortcut tooltip) */}
