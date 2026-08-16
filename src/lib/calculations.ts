@@ -32,6 +32,7 @@ export interface TradeInput {
   commission?: number;
   fees?: number;
   strategyId?: string;
+  playbookId?: string;
   setup?: string;
   session?: string;
   tags?: string[];
@@ -72,6 +73,7 @@ export interface TradeCalculated {
   isLoss: boolean;
   isBreakEven: boolean;
   strategyId?: string;
+  playbookId?: string;
   setup?: string;
   session?: string;
   tags: string[];
@@ -112,6 +114,25 @@ export interface AnalyticsSummary {
   currentLossStreak: number;
   maxWinStreak: number;
   maxLossStreak: number;
+}
+
+export interface AdherenceComparison {
+  followed: {
+    count: number;
+    winRate: number;
+    netPnL: number;
+    averageR: number;
+    profitFactor: number;
+    expectancy: number;
+  };
+  violated: {
+    count: number;
+    winRate: number;
+    netPnL: number;
+    averageR: number;
+    profitFactor: number;
+    expectancy: number;
+  };
 }
 
 /**
@@ -217,6 +238,7 @@ export function calculateTradeMetrics(t: Partial<TradeInput>): TradeCalculated {
     isLoss,
     isBreakEven,
     strategyId: t.strategyId,
+    playbookId: t.playbookId,
     setup: t.setup || 'General Setup',
     session: t.session || 'NEW_YORK',
     tags: t.tags || ['Liquidity Sweep', 'London Killzone'],
@@ -241,7 +263,6 @@ export function calculateTradeMetrics(t: Partial<TradeInput>): TradeCalculated {
  * Calculates aggregate portfolio stats safely across non-archived trades.
  */
 export function calculateAnalyticsSummary(trades: TradeCalculated[], initialBalance: number = 10000): AnalyticsSummary {
-  // Exclude soft-archived trades from analytics
   const activeTrades = trades.filter((t) => t.status !== 'ARCHIVED');
   const totalTrades = activeTrades.length;
 
@@ -302,7 +323,6 @@ export function calculateAnalyticsSummary(trades: TradeCalculated[], initialBala
 
   const payoffRatio = averageLoss > 0 ? Math.round((averageWin / averageLoss) * 100) / 100 : averageWin > 0 ? 99 : 0;
 
-  // Peak-to-Trough Drawdown & Streaks
   let currentBalance = initialBalance;
   let peakBalance = initialBalance;
   let maxDrawdownAmount = 0;
@@ -380,5 +400,38 @@ export function calculateAnalyticsSummary(trades: TradeCalculated[], initialBala
     currentLossStreak: lossStreakCount,
     maxWinStreak,
     maxLossStreak,
+  };
+}
+
+/**
+ * Calculates Rules Followed vs Rules Violated Performance Split
+ */
+export function calculateAdherencePerformance(trades: TradeCalculated[]): AdherenceComparison {
+  const activeTrades = trades.filter((t) => t.status !== 'ARCHIVED');
+
+  // Classified as followed if no major mistake and rating >= 4
+  const followedTrades = activeTrades.filter((t) => t.mistake === 'None' && (t.rating || 5) >= 4);
+  const violatedTrades = activeTrades.filter((t) => t.mistake !== 'None' || (t.rating || 5) < 4);
+
+  const followedSummary = calculateAnalyticsSummary(followedTrades);
+  const violatedSummary = calculateAnalyticsSummary(violatedTrades);
+
+  return {
+    followed: {
+      count: followedSummary.totalTrades,
+      winRate: followedSummary.winRate,
+      netPnL: followedSummary.netPnL,
+      averageR: followedSummary.averageR,
+      profitFactor: followedSummary.profitFactor,
+      expectancy: followedSummary.expectancy,
+    },
+    violated: {
+      count: violatedSummary.totalTrades,
+      winRate: violatedSummary.winRate,
+      netPnL: violatedSummary.netPnL,
+      averageR: violatedSummary.averageR,
+      profitFactor: violatedSummary.profitFactor,
+      expectancy: violatedSummary.expectancy,
+    },
   };
 }

@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { useApp } from '@/context/AppContext';
-import { Plus, Flame } from 'lucide-react';
+import { Plus, Flame, ShieldCheck, CheckCircle2, AlertTriangle, BookMarked, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import {
   AreaChart,
   Area,
@@ -16,12 +17,12 @@ import {
 } from 'recharts';
 
 export default function DashboardPage() {
-  const { filteredTrades, analytics, activeAccountData, formatValue, setIsQuickAddOpen } = useApp();
+  const { filteredTrades, analytics, adherenceComparison, activeAccountData, formatValue, setIsQuickAddOpen, strategies, playbooks } = useApp();
 
   const startingBalance = activeAccountData?.startingBalance || 10000;
   const currentBalance = activeAccountData ? activeAccountData.currentBalance : startingBalance + analytics.netPnL;
 
-  // Build Equity Curve from Real Database Trades
+  // Build Equity Curve
   let runningBalance = startingBalance;
   const equityCurveData = [
     { date: 'Start', balance: startingBalance, pnl: 0 },
@@ -45,23 +46,8 @@ export default function DashboardPage() {
     { name: 'Breakeven', value: analytics.breakEvenTrades, color: '#6F767D' },
   ];
 
-  // Performance by Symbol
-  const symbolStatsMap: Record<string, { count: number; pnl: number; wins: number }> = {};
-  filteredTrades.forEach((t) => {
-    if (!symbolStatsMap[t.symbol]) {
-      symbolStatsMap[t.symbol] = { count: 0, pnl: 0, wins: 0 };
-    }
-    symbolStatsMap[t.symbol].count += 1;
-    symbolStatsMap[t.symbol].pnl += t.netPnL;
-    if (t.isWin) symbolStatsMap[t.symbol].wins += 1;
-  });
-
-  const symbolList = Object.entries(symbolStatsMap).map(([symbol, data]) => ({
-    symbol,
-    count: data.count,
-    pnl: Math.round(data.pnl * 100) / 100,
-    winRate: Math.round((data.wins / data.count) * 100),
-  }));
+  const topStrategy = strategies[0] || { name: 'ICT Concepts', winRate: 75.0 };
+  const topPlaybook = playbooks[0] || { name: 'London Liquidity Sweep', winRate: 80.0 };
 
   return (
     <div className="space-y-6 pb-12">
@@ -78,7 +64,7 @@ export default function DashboardPage() {
             className="btn-primary-lime text-xs px-4 py-2 rounded-xl shadow-glow flex items-center gap-1.5 font-heading font-black"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Add Trade</span>
+            <span>Add Trade (N)</span>
           </button>
         </div>
       </div>
@@ -118,6 +104,39 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* PHASE 3 STRATEGY & ADHERENCE INSIGHTS BAR */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="custom-card p-4 flex items-center justify-between">
+          <div className="space-y-0.5">
+            <span className="text-[10px] text-text-muted font-bold uppercase block font-heading">Top Performing Strategy</span>
+            <span className="text-sm font-bold text-text-primary font-heading">{topStrategy.name}</span>
+          </div>
+          <Link href="/strategies" className="p-2 rounded-xl bg-lime/10 text-lime hover:bg-lime/20 transition-colors">
+            <BookMarked className="w-4 h-4" />
+          </Link>
+        </div>
+
+        <div className="custom-card p-4 flex items-center justify-between">
+          <div className="space-y-0.5">
+            <span className="text-[10px] text-text-muted font-bold uppercase block font-heading">Best Playbook Setup</span>
+            <span className="text-sm font-bold text-lime font-heading">{topPlaybook.name}</span>
+          </div>
+          <Link href="/playbooks" className="p-2 rounded-xl bg-lime/10 text-lime hover:bg-lime/20 transition-colors">
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        <div className="custom-card p-4 flex items-center justify-between font-mono-num">
+          <div className="space-y-0.5">
+            <span className="text-[10px] text-text-muted font-bold uppercase block font-heading">Rules Followed Win Rate</span>
+            <span className="text-sm font-bold text-lime font-heading">{adherenceComparison.followed.winRate}%</span>
+          </div>
+          <div className="p-2 rounded-xl bg-lime/10 text-lime">
+            <ShieldCheck className="w-4 h-4" />
+          </div>
+        </div>
+      </div>
+
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 font-mono-num">
         <div className="custom-card p-4">
@@ -150,7 +169,6 @@ export default function DashboardPage() {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Equity Curve Area Chart */}
         <div className="lg:col-span-8 custom-card p-5 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider font-heading">Account Equity Growth Curve</h3>
@@ -177,7 +195,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Win / Loss Donut Chart */}
         <div className="lg:col-span-4 custom-card p-5 flex flex-col justify-between space-y-4">
           <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider font-heading">Win / Loss Distribution</h3>
           <div className="h-44 w-full flex items-center justify-center">
@@ -207,35 +224,6 @@ export default function DashboardPage() {
               <span className="font-bold text-text-muted">{analytics.breakEvenTrades}</span>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Performance by Symbol Table */}
-      <div className="custom-card p-5 space-y-4">
-        <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider font-heading">Performance Breakdown by Instrument</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse font-mono-num">
-            <thead>
-              <tr className="border-b border-bg-border text-text-muted uppercase text-[10px] font-heading font-bold">
-                <th className="py-2.5 px-3">Symbol</th>
-                <th className="py-2.5 px-3">Trades</th>
-                <th className="py-2.5 px-3">Win Rate</th>
-                <th className="py-2.5 px-3 text-right">Net P&L</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-bg-border">
-              {symbolList.map((item) => (
-                <tr key={item.symbol} className="hover:bg-bg-nested/60 transition-colors">
-                  <td className="py-3 px-3 font-bold text-text-primary font-heading">{item.symbol}</td>
-                  <td className="py-3 px-3 text-text-secondary">{item.count}</td>
-                  <td className="py-3 px-3 text-lime font-bold">{item.winRate}%</td>
-                  <td className={`py-3 px-3 text-right font-bold ${item.pnl >= 0 ? 'text-lime' : 'text-loss'}`}>
-                    {formatValue(item.pnl)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>

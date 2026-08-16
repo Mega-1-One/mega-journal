@@ -17,6 +17,8 @@ model User {
   accounts     Account[]
   trades       Trade[]
   strategies   Strategy[]
+  playbooks    Playbook[]
+  rules        Rule[]
   journal      JournalEntry[]
   notes        Note[]
 
@@ -30,8 +32,8 @@ model Account {
   name            String
   broker          String
   accountType     String   // PERSONAL, FUNDED, EVALUATION, DEMO
-  startingBalance Float    // Fixed precision financial value
-  currentBalance  Float    // Fixed precision financial value
+  startingBalance Float
+  currentBalance  Float
   currency        String   @default("USD")
   status          String   @default("ACTIVE") // ACTIVE, ARCHIVED
   notes           String?
@@ -42,15 +44,95 @@ model Account {
   @@index([userId])
 }
 
+model Strategy {
+  id          String     @id @default(uuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  market      String?
+  timeframe   String?
+  session     String?
+  status      String     @default("ACTIVE") // ACTIVE, PAUSED, ARCHIVED
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  playbooks   Playbook[]
+  rules       Rule[]
+  trades      Trade[]
+
+  @@index([userId])
+}
+
+model Playbook {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  strategyId    String
+  strategy      Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  market        String?
+  symbols       String?
+  sessions      String?
+  timeframes    String?
+  entryModel    String?
+  stopModel     String?
+  targetModel   String?
+  minRiskReward Float    @default(2.0)
+  status        String   @default("ACTIVE") // ACTIVE, PAUSED, ARCHIVED
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  rules         Rule[]
+  trades        Trade[]
+
+  @@index([userId])
+  @@index([strategyId])
+}
+
+model Rule {
+  id          String           @id @default(uuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  strategyId  String?
+  strategy    Strategy?        @relation(fields: [strategyId], references: [id], onDelete: SetNull)
+  playbookId  String?
+  playbook    Playbook?        @relation(fields: [playbookId], references: [id], onDelete: SetNull)
+  ruleName    String
+  category    String           // PRE_TRADE, SETUP, ENTRY, RISK, MANAGEMENT, EXIT, POST_TRADE, PSYCHOLOGY
+  isRequired  Boolean          @default(true)
+  priority    Int              @default(1)
+  status      String           @default("ACTIVE") // ACTIVE, ARCHIVED
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  checklists  TradeChecklist[]
+
+  @@index([userId])
+  @@index([strategyId])
+  @@index([playbookId])
+}
+
+model TradeChecklist {
+  id         String   @id @default(uuid())
+  tradeId    String
+  trade      Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  ruleId     String
+  rule       Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  isFollowed Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([tradeId])
+  @@index([ruleId])
+}
+
 model Trade {
-  id              String      @id @default(uuid())
+  id              String           @id @default(uuid())
   userId          String
-  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   accountId       String
-  account         Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account         Account          @relation(fields: [accountId], references: [id], onDelete: Cascade)
   symbol          String
-  assetClass      String      // FOREX, FUTURES, STOCKS, CRYPTO, INDICES, COMMODITIES
-  direction       String      // LONG, SHORT
+  assetClass      String
+  direction       String
   entryPrice      Float
   exitPrice       Float
   quantity        Float
@@ -58,35 +140,40 @@ model Trade {
   takeProfit      Float?
   entryTime       DateTime
   exitTime        DateTime
-  durationMinutes Int         @default(0)
-  grossPnL        Float       @default(0)
-  fees            Float       @default(0)
-  netPnL          Float       @default(0)
-  rMultiple       Float       @default(0)
-  initialRisk     Float       @default(0)
-  initialReward   Float       @default(0)
-  riskRewardRatio Float       @default(0)
-  isWin           Boolean     @default(false)
-  isLoss          Boolean     @default(false)
-  isBreakEven     Boolean     @default(false)
+  durationMinutes Int              @default(0)
+  grossPnL        Float            @default(0)
+  fees            Float            @default(0)
+  netPnL          Float            @default(0)
+  rMultiple       Float            @default(0)
+  initialRisk     Float            @default(0)
+  initialReward   Float            @default(0)
+  riskRewardRatio Float            @default(0)
+  isWin           Boolean          @default(false)
+  isLoss          Boolean          @default(false)
+  isBreakEven     Boolean          @default(false)
   strategyId      String?
-  strategy        Strategy?   @relation(fields: [strategyId], references: [id], onDelete: SetNull)
+  strategy        Strategy?        @relation(fields: [strategyId], references: [id], onDelete: SetNull)
+  playbookId      String?
+  playbook        Playbook?        @relation(fields: [playbookId], references: [id], onDelete: SetNull)
   setup           String?
-  session         String?     // ASIA, LONDON, NEW_YORK, OVERLAP
-  tags            String?     // JSON array string
+  session         String?
+  tags            String?
   mistake         String?
   emotion         String?
-  rating          Int?        @default(5)
+  rating          Int?             @default(5)
   notes           String?
-  status          String      @default("CLOSED") // OPEN, CLOSED
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  status          String           @default("ACTIVE") // ACTIVE, ARCHIVED
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   executions      Execution[]
+  checklists      TradeChecklist[]
 
   @@index([userId])
   @@index([accountId])
   @@index([symbol])
   @@index([entryTime])
+  @@index([strategyId])
+  @@index([playbookId])
 }
 
 model Execution {
@@ -94,32 +181,17 @@ model Execution {
   tradeId   String
   trade     Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
   timestamp DateTime @default(now())
-  action    String   // BUY, SELL
+  action    String
   quantity  Float
   price     Float
   fee       Float    @default(0)
-}
-
-model Strategy {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  description String?
-  market      String?
-  timeframe   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  trades      Trade[]
-
-  @@index([userId])
 }
 
 model JournalEntry {
   id            String   @id @default(uuid())
   userId        String
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date          String   // YYYY-MM-DD
+  date          String
   preMarketPlan String?
   duringSession String?
   eodReview     String?

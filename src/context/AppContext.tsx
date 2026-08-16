@@ -4,16 +4,23 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   TradeCalculated,
   AnalyticsSummary,
+  AdherenceComparison,
   calculateTradeMetrics,
   calculateAnalyticsSummary,
+  calculateAdherencePerformance,
 } from '@/lib/calculations';
 import {
   AccountData,
   PropFirmData,
   StrategyData,
+  PlaybookData,
+  RuleData,
+  ChecklistResult,
   DEMO_ACCOUNTS,
   DEMO_PROP_FIRMS,
   DEMO_STRATEGIES,
+  DEMO_PLAYBOOKS,
+  DEMO_RULES,
   getInitialCalculatedTrades,
 } from '@/lib/store';
 import { DatePreset, isDateInPreset } from '@/lib/dates';
@@ -59,10 +66,24 @@ interface AppContextType {
 
   strategies: StrategyData[];
   addStrategy: (s: StrategyData) => void;
+  updateStrategy: (id: string, updates: Partial<StrategyData>) => void;
+  archiveStrategy: (id: string) => void;
+
+  playbooks: PlaybookData[];
+  addPlaybook: (pb: PlaybookData) => void;
+  updatePlaybook: (id: string, updates: Partial<PlaybookData>) => void;
+  archivePlaybook: (id: string) => void;
+
+  rules: RuleData[];
+  addRule: (r: RuleData) => void;
+
+  checklists: ChecklistResult[];
+  updateChecklistResult: (tradeId: string, ruleId: string, isFollowed: boolean) => void;
 
   trades: TradeCalculated[];
   filteredTrades: TradeCalculated[];
   analytics: AnalyticsSummary;
+  adherenceComparison: AdherenceComparison;
 
   addTrade: (t: any) => void;
   updateTrade: (id: string, updates: Partial<TradeCalculated>) => void;
@@ -89,9 +110,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [accounts, setAccounts] = useState<AccountData[]>(DEMO_ACCOUNTS);
   const [propFirms] = useState<PropFirmData[]>(DEMO_PROP_FIRMS);
   const [strategies, setStrategies] = useState<StrategyData[]>(DEMO_STRATEGIES);
+  const [playbooks, setPlaybooks] = useState<PlaybookData[]>(DEMO_PLAYBOOKS);
+  const [rules, setRules] = useState<RuleData[]>(DEMO_RULES);
+  const [checklists, setChecklists] = useState<ChecklistResult[]>([]);
   const [trades, setTrades] = useState<TradeCalculated[]>(getInitialCalculatedTrades());
 
-  // Listen for Global Keyboard Shortcut 'N' to launch Add Trade Modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -130,7 +153,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const activeAccountData = accounts.find((a) => a.name === selectedAccount) || accounts[0];
 
-  // Reactively Filter Active Non-Archived Trades by Account & Expanded Date Preset
   const filteredTrades = trades.filter((t) => {
     if (t.status === 'ARCHIVED') return false;
     if (selectedAccount !== 'ALL' && t.account !== selectedAccount) return false;
@@ -139,6 +161,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const startingBalance = activeAccountData ? activeAccountData.startingBalance : 10000;
   const analytics = calculateAnalyticsSummary(filteredTrades, startingBalance);
+  const adherenceComparison = calculateAdherencePerformance(filteredTrades);
 
   const addAccount = (acc: AccountData) => {
     setAccounts((prev) => [...prev, acc]);
@@ -154,6 +177,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addStrategy = (s: StrategyData) => {
     setStrategies((prev) => [...prev, s]);
+  };
+
+  const updateStrategy = (id: string, updates: Partial<StrategyData>) => {
+    setStrategies((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
+  };
+
+  const archiveStrategy = (id: string) => {
+    setStrategies((prev) => prev.map((s) => (s.id === id ? { ...s, status: 'ARCHIVED' } : s)));
+  };
+
+  const addPlaybook = (pb: PlaybookData) => {
+    setPlaybooks((prev) => [...prev, pb]);
+  };
+
+  const updatePlaybook = (id: string, updates: Partial<PlaybookData>) => {
+    setPlaybooks((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+  };
+
+  const archivePlaybook = (id: string) => {
+    setPlaybooks((prev) => prev.map((p) => (p.id === id ? { ...p, status: 'ARCHIVED' } : p)));
+  };
+
+  const addRule = (r: RuleData) => {
+    setRules((prev) => [...prev, r]);
+  };
+
+  const updateChecklistResult = (tradeId: string, ruleId: string, isFollowed: boolean) => {
+    setChecklists((prev) => {
+      const existing = prev.find((c) => c.tradeId === tradeId && c.ruleId === ruleId);
+      if (existing) {
+        return prev.map((c) => (c.tradeId === tradeId && c.ruleId === ruleId ? { ...c, isFollowed } : c));
+      }
+      return [...prev, { tradeId, ruleId, ruleName: 'Checklist Rule', category: 'SETUP', isFollowed }];
+    });
   };
 
   const addTrade = (tInput: any) => {
@@ -240,9 +297,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         propFirms,
         strategies,
         addStrategy,
+        updateStrategy,
+        archiveStrategy,
+        playbooks,
+        addPlaybook,
+        updatePlaybook,
+        archivePlaybook,
+        rules,
+        addRule,
+        checklists,
+        updateChecklistResult,
         trades,
         filteredTrades,
         analytics,
+        adherenceComparison,
         addTrade,
         updateTrade,
         deleteTrade,

@@ -1,5 +1,4 @@
-// Central Seed Store for MEGA1 — The Trading Performance Operating System
-import { calculateTradeMetrics, TradeCalculated } from './calculations';
+import { TradeInput, calculateTradeMetrics, TradeCalculated } from './calculations';
 
 export interface AccountData {
   id: string;
@@ -9,24 +8,60 @@ export interface AccountData {
   startingBalance: number;
   currentBalance: number;
   currency: string;
-  status: string;
-  notes?: string;
+  status: 'ACTIVE' | 'ARCHIVED';
 }
 
 export interface PropFirmData {
   id: string;
+  accountName: string;
   firmName: string;
-  accountSize: number;
-  challengePhase: 'PHASE_1' | 'PHASE_2' | 'FUNDED';
+  step: 'CHALLENGE' | 'VERIFICATION' | 'FUNDED';
+  challengePhase: string;
   startingBalance: number;
+  initialBalance: number;
   currentBalance: number;
   profitTarget: number;
+  payoutTarget: number;
+  maxDailyLossLimit: number;
+  maxTotalLossLimit: number;
   dailyLossLimit: number;
   maximumLossLimit: number;
-  payoutTarget: number;
-  status: 'ACTIVE' | 'PASSED' | 'BREACHED';
   dailyRiskUsed: number;
   currentDrawdown: number;
+  todayLoss: number;
+  totalLoss: number;
+  daysRemaining: number;
+  status: 'PASSING' | 'WARNING' | 'FAILED';
+}
+
+export interface RuleData {
+  id: string;
+  strategyId?: string;
+  playbookId?: string;
+  ruleName: string;
+  ruleText?: string;
+  category: 'PRE_TRADE' | 'SETUP' | 'ENTRY' | 'RISK' | 'MANAGEMENT' | 'EXIT' | 'POST_TRADE' | 'PSYCHOLOGY';
+  isRequired: boolean;
+  priority: number;
+  streak?: number;
+  status: 'ACTIVE' | 'ARCHIVED';
+}
+
+export interface PlaybookData {
+  id: string;
+  strategyId: string;
+  name: string;
+  description: string;
+  market: string;
+  symbols: string;
+  sessions: string;
+  timeframes: string;
+  entryModel: string;
+  stopModel: string;
+  targetModel: string;
+  minRiskReward: number;
+  status: 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
+  rules: RuleData[];
 }
 
 export interface StrategyData {
@@ -36,45 +71,39 @@ export interface StrategyData {
   market: string;
   timeframe: string;
   session: string;
-  rules: string[];
+  status: 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
+  winRate: number;
+  totalTrades: number;
+  netPnL: number;
+  rules?: RuleData[];
 }
 
-export interface TradingRule {
-  id: string;
-  ruleText: string;
+export interface ChecklistResult {
+  tradeId: string;
+  ruleId: string;
+  ruleName: string;
   category: string;
-  streak: number;
+  isFollowed: boolean;
 }
 
 export const DEMO_ACCOUNTS: AccountData[] = [
   {
-    id: 'acc-mega1-prop',
+    id: 'acc-1',
     name: 'MEGA1 $10K Prop Account',
-    broker: 'FTMO MT4 / Rithmic',
-    accountType: 'EVALUATION',
+    broker: 'FTMO / MetaTrader 5',
+    accountType: 'FUNDED',
     startingBalance: 10000,
-    currentBalance: 10840,
-    currency: 'USD',
-    status: 'ACTIVE',
-    notes: 'Evaluation challenge account for prop funding',
-  },
-  {
-    id: 'acc-mega1-forex',
-    name: 'MEGA1 Forex Personal',
-    broker: 'OANDA v20 API',
-    accountType: 'PERSONAL',
-    startingBalance: 1000,
-    currentBalance: 1145,
+    currentBalance: 11850,
     currency: 'USD',
     status: 'ACTIVE',
   },
   {
-    id: 'acc-mega1-demo',
-    name: 'MEGA1 Demo Account',
-    broker: 'MetaTrader 5 Demo',
-    accountType: 'DEMO',
+    id: 'acc-2',
+    name: 'Apex $50K Futures Account',
+    broker: 'Tradovate / NinjaTrader',
+    accountType: 'EVALUATION',
     startingBalance: 50000,
-    currentBalance: 51200,
+    currentBalance: 53200,
     currency: 'USD',
     status: 'ACTIVE',
   },
@@ -82,161 +111,215 @@ export const DEMO_ACCOUNTS: AccountData[] = [
 
 export const DEMO_PROP_FIRMS: PropFirmData[] = [
   {
-    id: 'prop-mega1-1',
-    firmName: 'MEGA1 Prop Challenge',
-    accountSize: 10000,
-    challengePhase: 'PHASE_1',
+    id: 'pf-1',
+    accountName: 'MEGA1 $10K Prop Account',
+    firmName: 'FTMO',
+    step: 'FUNDED',
+    challengePhase: 'Phase 1 Funded',
     startingBalance: 10000,
-    currentBalance: 10840,
+    initialBalance: 10000,
+    currentBalance: 11850,
     profitTarget: 1000,
+    payoutTarget: 12000,
+    maxDailyLossLimit: 500,
+    maxTotalLossLimit: 1000,
     dailyLossLimit: 500,
     maximumLossLimit: 1000,
-    payoutTarget: 11000,
-    status: 'ACTIVE',
     dailyRiskUsed: 120,
-    currentDrawdown: 180,
+    currentDrawdown: 120,
+    todayLoss: 120,
+    totalLoss: 0,
+    daysRemaining: 30,
+    status: 'PASSING',
+  },
+];
+
+export const DEMO_RULES: RuleData[] = [
+  {
+    id: 'rule-1',
+    strategyId: 'strat-1',
+    ruleName: 'HTF 15m/1h Liquidity Sweep Confirmed',
+    ruleText: 'HTF 15m/1h Liquidity Sweep Confirmed',
+    category: 'PRE_TRADE',
+    isRequired: true,
+    priority: 1,
+    streak: 12,
+    status: 'ACTIVE',
+  },
+  {
+    id: 'rule-2',
+    strategyId: 'strat-1',
+    ruleName: '5m Market Structure Shift with Displacement',
+    ruleText: '5m Market Structure Shift with Displacement',
+    category: 'ENTRY',
+    isRequired: true,
+    priority: 2,
+    streak: 9,
+    status: 'ACTIVE',
+  },
+  {
+    id: 'rule-3',
+    strategyId: 'strat-1',
+    ruleName: '50% FVG Retracement Entry',
+    ruleText: '50% FVG Retracement Entry',
+    category: 'ENTRY',
+    isRequired: true,
+    priority: 3,
+    streak: 14,
+    status: 'ACTIVE',
+  },
+  {
+    id: 'rule-4',
+    strategyId: 'strat-1',
+    ruleName: 'Risk Capped at Maximum 1% per Position',
+    ruleText: 'Risk Capped at Maximum 1% per Position',
+    category: 'RISK',
+    isRequired: true,
+    priority: 4,
+    streak: 18,
+    status: 'ACTIVE',
+  },
+  {
+    id: 'rule-5',
+    strategyId: 'strat-1',
+    ruleName: 'Minimum 2.0 Risk-to-Reward Ratio',
+    ruleText: 'Minimum 2.0 Risk-to-Reward Ratio',
+    category: 'RISK',
+    isRequired: true,
+    priority: 5,
+    streak: 8,
+    status: 'ACTIVE',
+  },
+];
+
+export const DEMO_TRADING_RULES = DEMO_RULES;
+
+export const DEMO_PLAYBOOKS: PlaybookData[] = [
+  {
+    id: 'pb-1',
+    strategyId: 'strat-1',
+    name: 'London Liquidity Sweep',
+    description: 'Sweeps Asian session highs/lows during London killzone (02:00 - 05:00 EST).',
+    market: 'Forex & Gold',
+    symbols: 'XAUUSD, EURUSD, GBPUSD',
+    sessions: 'LONDON',
+    timeframes: '15m / 5m / 1m',
+    entryModel: '50% Fair Value Gap retrace after 5m MSS',
+    stopModel: '1-2 pips beyond local swing high/low',
+    targetModel: 'Opposite session liquidity or 1:3 R/R',
+    minRiskReward: 2.5,
+    status: 'ACTIVE',
+    rules: DEMO_RULES,
+  },
+  {
+    id: 'pb-2',
+    strategyId: 'strat-1',
+    name: 'NY Open Judas Swing',
+    description: 'Fakeout expansion at 09:30 EST NYSE open reversing into true trend direction.',
+    market: 'Indices & Futures',
+    symbols: 'NAS100, US30, SPX500',
+    sessions: 'NEW_YORK',
+    timeframes: '15m / 3m',
+    entryModel: '3m Market Structure Shift + Order Block',
+    stopModel: 'Above Judas swing high',
+    targetModel: 'Daily open price or 1:2 R/R',
+    minRiskReward: 2.0,
+    status: 'ACTIVE',
+    rules: DEMO_RULES,
   },
 ];
 
 export const DEMO_STRATEGIES: StrategyData[] = [
   {
     id: 'strat-1',
-    name: 'ICT London Killzone FVG',
-    description: 'Trading London session liquidity sweeps into 15m Fair Value Gaps with 5m MSS confirmation.',
-    market: 'Forex & Indices',
+    name: 'ICT Concepts (Smart Money)',
+    description: 'Liquidity sweeps, Fair Value Gaps, and Market Structure Shifts during high-volume sessions.',
+    market: 'Forex, Indices, Commodities',
     timeframe: '15m / 5m',
-    session: 'London (02:00 - 05:00 EST)',
-    rules: [
-      'Asian range liquidity swept',
-      'Market Structure Shift on 5m timeframe',
-      'Displacement leaving Fair Value Gap',
-      'Entry limit order at 50% FVG retrace',
-      'Stop loss beyond swing high/low',
-      'Risk capped at 1% per trade',
-    ],
+    session: 'London & NY Overlap',
+    status: 'ACTIVE',
+    winRate: 75.0,
+    totalTrades: 12,
+    netPnL: 3850.0,
+    rules: DEMO_RULES,
   },
   {
     id: 'strat-2',
-    name: 'New York Open Break of Structure',
-    description: 'Capturing NY equities open continuation off 1h Order Blocks.',
-    market: 'NAS100 / US30',
+    name: 'Asian Range Expansion Breakout',
+    description: 'Breakout and retest of Asian session consolidation boundaries during London open.',
+    market: 'Forex (EURUSD, GBPUSD)',
     timeframe: '1h / 15m',
-    session: 'New York (09:30 - 11:30 EST)',
-    rules: [
-      '1h trend bias confirmed',
-      'NY 09:30 open volatility sweep',
-      'Retest of key 1h Order Block',
-      'Target 1:3 Risk/Reward minimum',
-    ],
+    session: 'London',
+    status: 'ACTIVE',
+    winRate: 60.0,
+    totalTrades: 5,
+    netPnL: 1200.0,
+    rules: DEMO_RULES,
   },
 ];
 
-export const DEMO_TRADING_RULES: TradingRule[] = [
-  { id: 'rule-1', ruleText: 'Never risk more than 1% per trade', category: 'Risk Management', streak: 12 },
-  { id: 'rule-2', ruleText: 'Must have 5m Market Structure Shift confirmation before entry', category: 'Execution', streak: 8 },
-  { id: 'rule-3', ruleText: 'No trading during high-impact news releases (NFP, CPI)', category: 'Discipline', streak: 15 },
-  { id: 'rule-4', ruleText: 'Stop trading for the day after 2 consecutive losses', category: 'Psychology', streak: 5 },
-];
-
-export const RAW_TRADES = [
+export const RAW_DEMO_TRADES: Partial<TradeInput>[] = [
   {
-    id: 'trd-mega1-101',
+    id: 'trd-101',
     account: 'MEGA1 $10K Prop Account',
-    symbol: 'NAS100',
-    assetClass: 'INDICES',
+    symbol: 'XAUUSD',
+    assetClass: 'COMMODITIES',
     direction: 'LONG',
-    entryPrice: 19820,
-    exitPrice: 19950,
-    quantity: 1,
-    stopLoss: 19770,
-    takeProfit: 19970,
-    entryTime: '2026-08-15T14:30:00Z',
-    exitTime: '2026-08-15T15:45:00Z',
-    totalFees: 10,
-    strategyId: 'strat-2',
-    setup: 'Order Block Retest',
+    entryPrice: 2420.0,
+    exitPrice: 2438.5,
+    quantity: 1.0,
+    stopLoss: 2412.0,
+    takeProfit: 2440.0,
+    entryTime: new Date(Date.now() - 3600000 * 2).toISOString(),
+    exitTime: new Date(Date.now() - 1800000).toISOString(),
+    totalFees: 9.0,
+    strategyId: 'strat-1',
+    playbookId: 'pb-1',
+    setup: 'Liquidity Sweep',
     session: 'NEW_YORK',
-    tags: ['NY Open', 'Clean Break'],
+    tags: ['Liquidity Sweep', 'London Killzone'],
     mistake: 'None',
     emotion: 'Calm',
     confidence: 9,
     rating: 5,
-    notes: 'Excellently executed NY open continuation off 1h order block.',
+    notes: 'Clean 15m FVG retrace entry after Asian high sweep.',
+    structuredNotes: {
+      whyEntered: 'Swept liquidity into 15m Fair Value Gap.',
+      whatSaw: '5m Market Structure Shift with high volume displacement.',
+      whatWentWell: 'Waited patiently for 50% FVG retrace entry.',
+      whatWentWrong: 'No major execution mistakes.',
+      lessonLearned: 'Sticking to pre-market bias yields high expectancy.',
+    },
+    status: 'ACTIVE',
   },
   {
-    id: 'trd-mega1-102',
+    id: 'trd-102',
     account: 'MEGA1 $10K Prop Account',
-    symbol: 'XAUUSD',
-    assetClass: 'COMMODITIES',
+    symbol: 'NAS100',
+    assetClass: 'INDICES',
     direction: 'SHORT',
-    entryPrice: 2435.5,
-    exitPrice: 2418.0,
-    quantity: 1.0,
-    stopLoss: 2441.0,
-    takeProfit: 2415.0,
-    entryTime: '2026-08-15T08:15:00Z',
-    exitTime: '2026-08-15T10:00:00Z',
-    totalFees: 12,
+    entryPrice: 19850.0,
+    exitPrice: 19780.0,
+    quantity: 2.0,
+    stopLoss: 19890.0,
+    takeProfit: 19750.0,
+    entryTime: new Date(Date.now() - 86400000 * 1).toISOString(),
+    exitTime: new Date(Date.now() - 86400000 * 1 + 3600000).toISOString(),
+    totalFees: 12.0,
     strategyId: 'strat-1',
-    setup: 'Liquidity Sweep',
-    session: 'LONDON',
-    tags: ['London Killzone', 'FVG'],
+    playbookId: 'pb-2',
+    setup: 'Fair Value Gap',
+    session: 'NEW_YORK',
+    tags: ['FVG', 'Order Block'],
     mistake: 'None',
     emotion: 'Confident',
     confidence: 8,
     rating: 5,
-    notes: 'Swept Asian high at 2435 and crashed into 1h discount array.',
-  },
-  {
-    id: 'trd-mega1-103',
-    account: 'MEGA1 $10K Prop Account',
-    symbol: 'EURUSD',
-    assetClass: 'FOREX',
-    direction: 'LONG',
-    entryPrice: 1.092,
-    exitPrice: 1.0895,
-    quantity: 2,
-    stopLoss: 1.0895,
-    takeProfit: 1.097,
-    entryTime: '2026-08-14T07:00:00Z',
-    exitTime: '2026-08-14T08:30:00Z',
-    totalFees: 8,
-    strategyId: 'strat-1',
-    setup: 'FVG Retest',
-    session: 'LONDON',
-    tags: ['London', 'Loss'],
-    mistake: 'FOMO Entry',
-    emotion: 'Frustrated',
-    confidence: 5,
-    rating: 2,
-    notes: 'Entered before 5m MSS confirmation. Stopped out cleanly.',
-  },
-  {
-    id: 'trd-mega1-104',
-    account: 'MEGA1 $10K Prop Account',
-    symbol: 'GBPUSD',
-    assetClass: 'FOREX',
-    direction: 'SHORT',
-    entryPrice: 1.284,
-    exitPrice: 1.278,
-    quantity: 2,
-    stopLoss: 1.2865,
-    takeProfit: 1.277,
-    entryTime: '2026-08-12T09:00:00Z',
-    exitTime: '2026-08-12T11:45:00Z',
-    totalFees: 10,
-    strategyId: 'strat-1',
-    setup: 'MSS',
-    session: 'NEW_YORK',
-    tags: ['NY Session', 'Clean RR'],
-    mistake: 'None',
-    emotion: 'Confident',
-    confidence: 9,
-    rating: 5,
-    notes: 'Rejection off daily order block with high volume displacement.',
+    notes: 'Rejection from 1h Order Block at NYSE open.',
+    status: 'ACTIVE',
   },
 ];
 
 export function getInitialCalculatedTrades(): TradeCalculated[] {
-  return RAW_TRADES.map((t) => calculateTradeMetrics(t as any));
+  return RAW_DEMO_TRADES.map((t) => calculateTradeMetrics(t));
 }
