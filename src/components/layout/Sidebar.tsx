@@ -16,11 +16,9 @@ import {
   ShieldCheck,
   Target,
   AlertTriangle,
-  Sparkles,
   FileSpreadsheet,
   Settings,
   LogOut,
-  ChevronRight,
 } from 'lucide-react';
 
 interface NavGroup {
@@ -85,16 +83,17 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-bg-surface border-r border-bg-border flex flex-col h-screen sticky top-0 z-30 select-none transition-colors">
       {/* Brand Header */}
-      <div className="p-4 border-b border-bg-border flex items-center justify-between">
+      <div className="p-5 border-b border-bg-border flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-lime text-bg-main font-black flex items-center justify-center text-sm font-heading shadow-sm">
-            M1
+          <div className="w-8 h-8 rounded-xl bg-lime text-bg-main font-black flex items-center justify-center text-sm font-heading shadow-glow">
+            MJ
           </div>
           <div>
-            <span className="font-extrabold text-lg text-text-primary tracking-tight flex items-center gap-1 font-heading">
-              MEGA<span className="text-lime font-black">1</span>
+            <span className="font-black text-lg tracking-tight font-heading flex items-center gap-1">
+              <span className="text-text-primary">MEGA</span>
+              <span className="text-lime">JOURNAL</span>
             </span>
-            <span className="text-[10px] text-text-muted block font-medium">The Trading Performance OS</span>
+            <span className="text-[10px] text-text-muted block font-medium">The Trading Performance Journal</span>
           </div>
         </Link>
       </div>
@@ -113,7 +112,7 @@ export function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-all ${
+                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all relative ${
                     isActive
                       ? 'bg-bg-card text-text-primary font-bold border-l-2 border-lime'
                       : 'text-text-secondary hover:text-text-primary hover:bg-bg-nested'
@@ -137,14 +136,14 @@ export function Sidebar() {
 
       {/* User Profile */}
       <div className="p-3 border-t border-bg-border bg-bg-main">
-        <div className="flex items-center justify-between p-2 rounded-lg bg-bg-card border border-bg-border">
+        <div className="flex items-center justify-between p-2 rounded-xl bg-bg-card border border-bg-border">
           <div className="flex items-center gap-2.5 overflow-hidden">
             <div className="w-7 h-7 rounded-full bg-lime/15 text-lime border border-lime/30 flex items-center justify-center font-bold text-xs font-heading">
-              M1
+              MJ
             </div>
             <div className="overflow-hidden">
               <span className="text-xs font-bold text-text-primary block truncate font-heading">Alex Mercer</span>
-              <span className="text-[10px] text-text-muted block truncate font-medium">MEGA1 Pro Tier</span>
+              <span className="text-[10px] text-text-muted block truncate font-medium">Mega Journal Pro</span>
             </div>
           </div>
           <button className="text-text-muted hover:text-loss p-1 transition-colors" title="Logout">

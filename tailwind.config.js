@@ -9,7 +9,6 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // 60% NEUTRAL BACKGROUND & SURFACES
         bg: {
           main: 'var(--bg-main)',
           surface: 'var(--bg-surface)',
@@ -17,29 +16,28 @@ module.exports = {
           nested: 'var(--bg-nested)',
           border: 'var(--border-subtle)',
         },
-        // 30% PRIMARY STRUCTURAL TONES
         text: {
           primary: 'var(--text-primary)',
           secondary: 'var(--text-secondary)',
           muted: 'var(--text-muted)',
         },
-        // 10% BOLD ACCENT
         lime: {
           DEFAULT: '#C8FF00',
-          hover: '#B5E600',
-          dark: '#9BC900',
-          glow: 'rgba(200, 255, 0, 0.12)',
+          hover: '#D4FF33',
         },
-        // SEMANTIC COLORS
-        profit: '#C8FF00',
-        loss: '#EF4444',
         warning: '#F59E0B',
+        loss: '#EF4444',
       },
       fontFamily: {
         heading: ['var(--font-space-grotesk)', 'sans-serif'],
         body: ['var(--font-ibm-plex)', 'sans-serif'],
+        mono: ['IBM Plex Mono', 'monospace'],
+      },
+      boxShadow: {
+        glow: '0 0 20px rgba(200, 255, 0, 0.25)',
+        'lime-subtle': '0 4px 20px rgba(200, 255, 0, 0.12)',
       },
     },
   },
   plugins: [],
-}
+};

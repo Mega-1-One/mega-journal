@@ -2,18 +2,7 @@
 
 import React from 'react';
 import { useApp } from '@/context/AppContext';
-import Link from 'next/link';
-import {
-  TrendingUp,
-  Wallet,
-  Percent,
-  Activity,
-  Flame,
-  Plus,
-  ArrowUpRight,
-  ArrowDownRight,
-  Scale,
-} from 'lucide-react';
+import { Plus, Flame } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -39,7 +28,7 @@ export default function DashboardPage() {
     ...filteredTrades
       .slice()
       .sort((a, b) => new Date(a.entryTime).getTime() - new Date(b.entryTime).getTime())
-      .map((t, idx) => {
+      .map((t) => {
         runningBalance += t.netPnL;
         return {
           date: new Date(t.entryTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -79,18 +68,14 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-text-primary tracking-tight font-heading flex items-center gap-2">
-            MEGA1 Command Center
-          </h1>
-          <p className="text-xs text-text-secondary">
-            Operating system performance metrics derived from real database executions
-          </p>
+          <h1 className="text-2xl font-black text-text-primary tracking-tight font-heading">Dashboard</h1>
+          <p className="text-xs text-text-secondary">Your trading performance at a glance.</p>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsQuickAddOpen(true)}
-            className="btn-primary-lime text-xs px-4 py-2 rounded-lg shadow flex items-center gap-1.5 font-heading font-black"
+            className="btn-primary-lime text-xs px-4 py-2 rounded-xl shadow-glow flex items-center gap-1.5 font-heading font-black"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>Add Trade</span>
@@ -209,15 +194,15 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono-num">
-            <div className="p-2 rounded bg-bg-nested border border-bg-border">
+            <div className="p-2 rounded-xl bg-bg-nested border border-bg-border">
               <span className="text-[10px] text-text-muted block font-heading">Wins</span>
               <span className="font-bold text-lime">{analytics.winningTrades}</span>
             </div>
-            <div className="p-2 rounded bg-bg-nested border border-bg-border">
+            <div className="p-2 rounded-xl bg-bg-nested border border-bg-border">
               <span className="text-[10px] text-text-muted block font-heading">Losses</span>
               <span className="font-bold text-loss">{analytics.losingTrades}</span>
             </div>
-            <div className="p-2 rounded bg-bg-nested border border-bg-border">
+            <div className="p-2 rounded-xl bg-bg-nested border border-bg-border">
               <span className="text-[10px] text-text-muted block font-heading">Breakeven</span>
               <span className="font-bold text-text-muted">{analytics.breakEvenTrades}</span>
             </div>
@@ -240,7 +225,7 @@ export default function DashboardPage() {
             </thead>
             <tbody className="divide-y divide-bg-border">
               {symbolList.map((item) => (
-                <tr key={item.symbol} className="hover:bg-bg-nested/60">
+                <tr key={item.symbol} className="hover:bg-bg-nested/60 transition-colors">
                   <td className="py-3 px-3 font-bold text-text-primary font-heading">{item.symbol}</td>
                   <td className="py-3 px-3 text-text-secondary">{item.count}</td>
                   <td className="py-3 px-3 text-lime font-bold">{item.winRate}%</td>

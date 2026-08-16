@@ -10,7 +10,6 @@ import {
   Sun,
   Eye,
   EyeOff,
-  Bell,
   Calendar,
   Wallet,
 } from 'lucide-react';
@@ -46,29 +45,32 @@ export function Topbar() {
     if (pathname === '/prop-firm') return 'Prop Firm Risk Monitor';
     if (pathname === '/import') return 'Broker CSV Importer';
     if (pathname === '/settings') return 'Settings & Preferences';
-    return 'MEGA1 OS';
+    return 'Mega Journal';
   };
 
   return (
     <header className="h-16 border-b border-bg-border bg-bg-surface px-6 flex items-center justify-between sticky top-0 z-20 transition-colors">
       {/* Page Title & Search */}
       <div className="flex items-center gap-4">
-        <h2 className="text-base font-black text-text-primary tracking-tight font-heading">{getPageTitle()}</h2>
+        <div>
+          <h2 className="text-base font-black text-text-primary tracking-tight font-heading">{getPageTitle()}</h2>
+          <span className="text-[10px] text-text-muted hidden sm:block">Your trading performance at a glance.</span>
+        </div>
 
         <button
           onClick={() => setIsCommandPaletteOpen(true)}
-          className="hidden md:flex items-center gap-2 bg-bg-main border border-bg-border rounded-lg px-3 py-1.5 text-xs text-text-muted hover:text-text-primary hover:border-lime/40 transition-colors"
+          className="hidden md:flex items-center gap-2 bg-bg-main border border-bg-border rounded-xl px-3 py-1.5 text-xs text-text-muted hover:text-text-primary hover:border-lime/40 transition-colors"
         >
-          <Search className="w-3.5 h-3.5" />
+          <Search className="w-3.5 h-3.5 text-lime" />
           <span>Search trades, strategies...</span>
-          <kbd className="bg-bg-card border border-bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">Ctrl+K</kbd>
+          <kbd className="bg-bg-card border border-bg-border px-1.5 py-0.5 rounded text-[10px] font-mono text-text-muted">Ctrl+K</kbd>
         </button>
       </div>
 
       {/* Controls & Actions */}
       <div className="flex items-center gap-3">
         {/* Account Selector */}
-        <div className="relative flex items-center gap-1.5 bg-bg-main border border-bg-border rounded-lg px-2.5 py-1 text-xs">
+        <div className="relative flex items-center gap-1.5 bg-bg-main border border-bg-border rounded-xl px-3 py-1.5 text-xs">
           <Wallet className="w-3.5 h-3.5 text-lime" />
           <select
             value={selectedAccount}
@@ -85,12 +87,12 @@ export function Topbar() {
         </div>
 
         {/* Date Selector */}
-        <div className="hidden sm:flex items-center gap-1.5 bg-bg-main border border-bg-border rounded-lg px-2.5 py-1 text-xs">
+        <div className="hidden sm:flex items-center gap-1.5 bg-bg-main border border-bg-border rounded-xl px-3 py-1.5 text-xs">
           <Calendar className="w-3.5 h-3.5 text-text-muted" />
           <select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value as any)}
-            className="bg-transparent text-text-secondary font-medium focus:outline-none cursor-pointer"
+            className="bg-transparent text-text-secondary font-medium focus:outline-none cursor-pointer hover:text-text-primary"
           >
             <option value="ALL" className="bg-bg-card text-text-primary">All Time</option>
             <option value="TODAY" className="bg-bg-card text-text-primary">Today</option>
@@ -103,7 +105,7 @@ export function Topbar() {
         {/* Privacy Toggle */}
         <button
           onClick={() => setIsPrivacyMode(!isPrivacyMode)}
-          className="p-2 rounded-lg bg-bg-main hover:bg-bg-nested text-text-muted hover:text-text-primary border border-bg-border transition-colors"
+          className="p-2 rounded-xl bg-bg-main hover:bg-bg-nested text-text-muted hover:text-text-primary border border-bg-border transition-colors"
           title={isPrivacyMode ? 'Show Financial Values' : 'Hide Financial Values (Privacy Mode)'}
         >
           {isPrivacyMode ? <EyeOff className="w-4 h-4 text-warning" /> : <Eye className="w-4 h-4" />}
@@ -112,16 +114,16 @@ export function Topbar() {
         {/* Theme Switcher */}
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="p-2 rounded-lg bg-bg-main hover:bg-bg-nested text-text-muted hover:text-text-primary border border-bg-border transition-colors"
+          className="p-2 rounded-xl bg-bg-main hover:bg-bg-nested text-text-muted hover:text-text-primary border border-bg-border transition-colors"
           title="Toggle Dark / Light Theme"
         >
           {theme === 'dark' ? <Sun className="w-4 h-4 text-lime" /> : <Moon className="w-4 h-4 text-text-primary" />}
         </button>
 
-        {/* Quick Add Trade Primary Action Button */}
+        {/* Primary Action Button (#C8FF00 background, #0B0D0F text) */}
         <button
           onClick={() => setIsQuickAddOpen(true)}
-          className="btn-primary-lime text-xs px-3.5 py-2 rounded-lg shadow flex items-center gap-1.5 font-heading font-black"
+          className="btn-primary-lime text-xs px-4 py-2 rounded-xl shadow-glow flex items-center gap-1.5 font-heading font-black"
         >
           <Plus className="w-4 h-4 stroke-[3]" />
           <span className="hidden sm:inline">Add Trade</span>
