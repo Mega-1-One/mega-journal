@@ -19,6 +19,7 @@ import {
   FileSpreadsheet,
   Settings,
   LogOut,
+  Layers,
 } from 'lucide-react';
 
 interface NavGroup {
@@ -34,23 +35,24 @@ export function Sidebar() {
       title: 'TRADING',
       items: [
         { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-        { name: 'Trades', href: '/trades', icon: Table },
+        { name: 'Trades Log', href: '/trades', icon: Table },
         { name: 'Accounts', href: '/accounts', icon: Wallet },
         { name: 'Calendar', href: '/calendar', icon: Calendar },
+      ],
+    },
+    {
+      title: 'ANALYTICS',
+      items: [
+        { name: 'Analytics Hub', href: '/analytics', icon: BarChart3 },
+        { name: 'Reports', href: '/reports', icon: FileText },
+        { name: 'Backtesting', href: '/backtest', icon: FlaskConical, isComingSoon: true },
       ],
     },
     {
       title: 'STRATEGY',
       items: [
         { name: 'Strategies', href: '/strategies', icon: BookMarked },
-        { name: 'Playbooks', href: '/strategies', icon: BookOpen },
-      ],
-    },
-    {
-      title: 'ANALYSIS',
-      items: [
-        { name: 'Reports', href: '/reports', icon: BarChart3 },
-        { name: 'Backtesting', href: '/backtest', icon: FlaskConical, isComingSoon: true },
+        { name: 'Playbooks', href: '/playbooks', icon: Layers },
       ],
     },
     {
@@ -124,7 +126,7 @@ export function Sidebar() {
                   </div>
                   {item.isComingSoon && (
                     <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-bg-nested text-text-muted border border-bg-border">
-                      P2
+                      P5
                     </span>
                   )}
                 </Link>

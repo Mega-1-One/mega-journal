@@ -135,6 +135,32 @@ export interface AdherenceComparison {
   };
 }
 
+export interface DrawdownDetails {
+  peakBalance: number;
+  currentBalance: number;
+  currentDrawdownAmount: number;
+  currentDrawdownPercent: number;
+  maxDrawdownAmount: number;
+  maxDrawdownPercent: number;
+  drawdownDurationTrades: number;
+  recoveryDurationTrades: number;
+  isRecovered: boolean;
+}
+
+export interface RDistributionBucket {
+  label: string;
+  count: number;
+  color: string;
+}
+
+export interface WeekdayStat {
+  day: string;
+  trades: number;
+  winRate: number;
+  netPnL: number;
+  averageR: number;
+}
+
 /**
  * Calculates trade financial metrics with fixed decimal rounding.
  */
@@ -251,7 +277,7 @@ export function calculateTradeMetrics(t: Partial<TradeInput>): TradeCalculated {
       whyEntered: 'Swept liquidity into 15m Fair Value Gap.',
       whatSaw: '5m Market Structure Shift with high volume displacement.',
       whatWentWell: 'Waited patiently for 50% FVG retrace entry.',
-      whatWentWrong: 'No major mistakes on execution.',
+      whatWentWrong: 'No major execution mistakes.',
       lessonLearned: 'Sticking to pre-market bias yields high expectancy.',
     },
     screenshots: t.screenshots || {},
@@ -409,7 +435,6 @@ export function calculateAnalyticsSummary(trades: TradeCalculated[], initialBala
 export function calculateAdherencePerformance(trades: TradeCalculated[]): AdherenceComparison {
   const activeTrades = trades.filter((t) => t.status !== 'ARCHIVED');
 
-  // Classified as followed if no major mistake and rating >= 4
   const followedTrades = activeTrades.filter((t) => t.mistake === 'None' && (t.rating || 5) >= 4);
   const violatedTrades = activeTrades.filter((t) => t.mistake !== 'None' || (t.rating || 5) < 4);
 
@@ -434,4 +459,100 @@ export function calculateAdherencePerformance(trades: TradeCalculated[]): Adhere
       expectancy: violatedSummary.expectancy,
     },
   };
+}
+
+/**
+ * Calculates Peak-to-Trough Drawdown Details
+ */
+export function calculateDrawdownDetails(trades: TradeCalculated[], startingBalance: number = 10000): DrawdownDetails {
+  const activeTrades = trades.filter((t) => t.status !== 'ARCHIVED');
+  let currentBal = startingBalance;
+  let peakBal = startingBalance;
+  let maxDD = 0;
+  let maxDDPct = 0;
+  let ddDuration = 0;
+  let recDuration = 0;
+
+  activeTrades.forEach((t) => {
+    currentBal += t.netPnL;
+    if (currentBal >= peakBal) {
+      peakBal = currentBal;
+      if (ddDuration > 0) {
+        recDuration += 1;
+      }
+    } else {
+      const dd = peakBal - currentBal;
+      const ddPct = (dd / peakBal) * 100;
+      ddDuration += 1;
+      if (dd > maxDD) maxDD = dd;
+      if (ddPct > maxDDPct) maxDDPct = ddPct;
+    }
+  });
+
+  const currDD = Math.max(0, peakBal - currentBal);
+  const currDDPct = peakBal > 0 ? (currDD / peakBal) * 100 : 0;
+
+  return {
+    peakBalance: Math.round(peakBal * 100) / 100,
+    currentBalance: Math.round(currentBal * 100) / 100,
+    currentDrawdownAmount: Math.round(currDD * 100) / 100,
+    currentDrawdownPercent: Math.round(currDDPct * 100) / 100,
+    maxDrawdownAmount: Math.round(maxDD * 100) / 100,
+    maxDrawdownPercent: Math.round(maxDDPct * 100) / 100,
+    drawdownDurationTrades: ddDuration,
+    recoveryDurationTrades: recDuration,
+    isRecovered: currentBal >= peakBal,
+  };
+}
+
+/**
+ * Calculates R-Multiple Distribution Histogram Buckets
+ */
+export function calculateRDistribution(trades: TradeCalculated[]): RDistributionBucket[] {
+  const activeTrades = trades.filter((t) => t.status !== 'ARCHIVED');
+
+  const buckets: RDistributionBucket[] = [
+    { label: '< -2R', count: 0, color: '#EF4444' },
+    { label: '-2R to -1R', count: 0, color: '#EF4444' },
+    { label: '-1R to 0R', count: 0, color: '#F59E0B' },
+    { label: '0R (BE)', count: 0, color: '#6F767D' },
+    { label: '0R to +1R', count: 0, color: '#C8FF00' },
+    { label: '+1R to +2R', count: 0, color: '#C8FF00' },
+    { label: '> +2R', count: 0, color: '#C8FF00' },
+  ];
+
+  activeTrades.forEach((t) => {
+    const r = t.rMultiple;
+    if (r < -2) buckets[0].count++;
+    else if (r >= -2 && r < -1) buckets[1].count++;
+    else if (r >= -1 && r < 0) buckets[2].count++;
+    else if (r === 0) buckets[3].count++;
+    else if (r > 0 && r <= 1) buckets[4].count++;
+    else if (r > 1 && r <= 2) buckets[5].count++;
+    else if (r > 2) buckets[6].count++;
+  });
+
+  return buckets;
+}
+
+/**
+ * Calculates Weekday Performance Breakdown
+ */
+export function calculateWeekdayPerformance(trades: TradeCalculated[]): WeekdayStat[] {
+  const activeTrades = trades.filter((t) => t.status !== 'ARCHIVED');
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+  return days.map((dayName, idx) => {
+    // 0 is Sun, 1 is Mon
+    const targetDayIndex = idx + 1;
+    const dayTrades = activeTrades.filter((t) => new Date(t.entryTime).getDay() === targetDayIndex);
+    const summary = calculateAnalyticsSummary(dayTrades);
+    return {
+      day: dayName,
+      trades: summary.totalTrades,
+      winRate: summary.winRate,
+      netPnL: summary.netPnL,
+      averageR: summary.averageR,
+    };
+  });
 }
