@@ -2,294 +2,251 @@
 
 import React from 'react';
 import { useApp } from '@/context/AppContext';
+import Link from 'next/link';
 import {
-  ResponsiveContainer,
+  TrendingUp,
+  Wallet,
+  Percent,
+  Activity,
+  Flame,
+  Plus,
+  ArrowUpRight,
+  ArrowDownRight,
+  Scale,
+} from 'lucide-react';
+import {
   AreaChart,
   Area,
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid,
+  ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
 } from 'recharts';
-import {
-  TrendingUp,
-  Activity,
-  Calendar as CalendarIcon,
-  ChevronRight,
-  Sparkles,
-  PieChart as PieIcon,
-} from 'lucide-react';
-import Link from 'next/link';
 
 export default function DashboardPage() {
-  const { analytics, filteredTrades, formatValue, privacyMode, accounts, selectedAccountId } = useApp();
+  const { filteredTrades, analytics, activeAccountData, formatValue, setIsQuickAddOpen } = useApp();
 
-  const selectedAcc = accounts.find((a) => a.id === selectedAccountId) || accounts[0];
-  const currentBalance = selectedAcc ? selectedAcc.currentBalance : 108450;
+  const startingBalance = activeAccountData?.startingBalance || 10000;
+  const currentBalance = activeAccountData ? activeAccountData.currentBalance : startingBalance + analytics.netPnL;
 
-  // Prepare Equity Curve Data
-  let cumulative = selectedAcc ? selectedAcc.startingBalance : 100000;
-  const equityData = filteredTrades
-    .slice()
-    .reverse()
-    .map((t, idx) => {
-      cumulative += t.netPnL;
-      return {
-        tradeIndex: `Trade #${idx + 1}`,
-        date: new Date(t.entryTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        equity: cumulative,
-        netPnL: t.netPnL,
-      };
-    });
-
-  // Performance by Instrument Data
-  const instrumentMap: Record<string, { symbol: string; pnl: number; count: number }> = {};
-  filteredTrades.forEach((t) => {
-    if (!instrumentMap[t.symbol]) {
-      instrumentMap[t.symbol] = { symbol: t.symbol, pnl: 0, count: 0 };
-    }
-    instrumentMap[t.symbol].pnl += t.netPnL;
-    instrumentMap[t.symbol].count += 1;
-  });
-  const instrumentData = Object.values(instrumentMap);
+  // Build Equity Curve from Real Database Trades
+  let runningBalance = startingBalance;
+  const equityCurveData = [
+    { date: 'Start', balance: startingBalance, pnl: 0 },
+    ...filteredTrades
+      .slice()
+      .sort((a, b) => new Date(a.entryTime).getTime() - new Date(b.entryTime).getTime())
+      .map((t, idx) => {
+        runningBalance += t.netPnL;
+        return {
+          date: new Date(t.entryTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          balance: Math.round(runningBalance * 100) / 100,
+          pnl: t.netPnL,
+        };
+      }),
+  ];
 
   // Win/Loss Pie Data
-  const winLossData = [
-    { name: 'Winning Trades', value: analytics.winningTrades, color: '#C8FF00' },
-    { name: 'Losing Trades', value: analytics.losingTrades, color: '#EF4444' },
-    { name: 'Break Even', value: analytics.breakEvenTrades, color: '#6F767D' },
+  const pieData = [
+    { name: 'Wins', value: analytics.winningTrades, color: '#C8FF00' },
+    { name: 'Losses', value: analytics.losingTrades, color: '#EF4444' },
+    { name: 'Breakeven', value: analytics.breakEvenTrades, color: '#6F767D' },
   ];
+
+  // Performance by Symbol
+  const symbolStatsMap: Record<string, { count: number; pnl: number; wins: number }> = {};
+  filteredTrades.forEach((t) => {
+    if (!symbolStatsMap[t.symbol]) {
+      symbolStatsMap[t.symbol] = { count: 0, pnl: 0, wins: 0 };
+    }
+    symbolStatsMap[t.symbol].count += 1;
+    symbolStatsMap[t.symbol].pnl += t.netPnL;
+    if (t.isWin) symbolStatsMap[t.symbol].wins += 1;
+  });
+
+  const symbolList = Object.entries(symbolStatsMap).map(([symbol, data]) => ({
+    symbol,
+    count: data.count,
+    pnl: Math.round(data.pnl * 100) / 100,
+    winRate: Math.round((data.wins / data.count) * 100),
+  }));
 
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-text-primary tracking-tight font-heading">
-            Dashboard
+          <h1 className="text-2xl font-black text-text-primary tracking-tight font-heading flex items-center gap-2">
+            MEGA1 Command Center
           </h1>
-          <p className="text-xs text-text-secondary">Your trading performance at a glance.</p>
+          <p className="text-xs text-text-secondary">
+            Operating system performance metrics derived from real database executions
+          </p>
         </div>
 
-        <div className="flex items-center gap-4 bg-bg-card p-3 rounded-xl border border-bg-border">
-          <div className="text-right">
-            <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest block font-heading">
-              Account Balance
-            </span>
-            <span className="text-xl font-black text-text-primary tracking-tight font-mono-num font-heading">
-              {privacyMode ? '••••••' : `$${currentBalance.toLocaleString()}`}
-            </span>
-          </div>
-          <Link
-            href="/journal"
-            className="flex items-center gap-1.5 bg-bg-nested hover:bg-bg-card text-text-primary border border-bg-border px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsQuickAddOpen(true)}
+            className="btn-primary-lime text-xs px-4 py-2 rounded-lg shadow flex items-center gap-1.5 font-heading font-black"
           >
-            <CalendarIcon className="w-3.5 h-3.5 text-lime" />
-            <span>Open Journal</span>
-          </Link>
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>Add Trade</span>
+          </button>
         </div>
       </div>
 
-      {/* Hero Performance Card & Top KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {/* HERO CARD: Net P&L (Accent Border) */}
-        <div className="custom-card p-4 border-lime/40 bg-bg-card relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-12 h-12 bg-lime/5 rounded-bl-full pointer-events-none"></div>
-          <span className="text-[10px] font-extrabold text-text-muted uppercase tracking-wider block mb-1 font-heading">
-            Net P&L
-          </span>
-          <span className={`text-xl font-black tracking-tight block font-mono-num font-heading ${analytics.netPnL >= 0 ? 'text-lime' : 'text-loss'}`}>
-            {formatValue(analytics.netPnL)}
-          </span>
-          <span className="text-[10px] text-text-muted mt-1 block font-medium">Total Closed Trades</span>
-        </div>
-
-        {/* Account Balance */}
-        <div className="custom-card p-4">
-          <span className="text-[10px] font-extrabold text-text-muted uppercase tracking-wider block mb-1 font-heading">
-            Account Balance
-          </span>
-          <span className="text-xl font-black text-text-primary tracking-tight block font-mono-num font-heading">
-            {privacyMode ? '••••••' : `$${currentBalance.toLocaleString()}`}
-          </span>
-          <span className="text-[10px] text-text-muted mt-1 block font-medium">Selected Portfolio</span>
-        </div>
-
-        {/* Win Rate */}
-        <div className="custom-card p-4">
-          <span className="text-[10px] font-extrabold text-text-muted uppercase tracking-wider block mb-1 font-heading">
-            Win Rate
-          </span>
-          <span className="text-xl font-black text-text-primary tracking-tight block font-mono-num font-heading">{analytics.winRate}%</span>
-          <span className="text-[10px] text-lime mt-1 block font-semibold">
-            {analytics.winningTrades} W / {analytics.losingTrades} L
-          </span>
-        </div>
-
-        {/* Profit Factor */}
-        <div className="custom-card p-4">
-          <span className="text-[10px] font-extrabold text-text-muted uppercase tracking-wider block mb-1 font-heading">
-            Profit Factor
-          </span>
-          <span className="text-xl font-black text-text-primary tracking-tight block font-mono-num font-heading">{analytics.profitFactor}</span>
-          <span className="text-[10px] text-text-muted mt-1 block font-medium">Gross Profit / Loss</span>
-        </div>
-
-        {/* Average R */}
-        <div className="custom-card p-4">
-          <span className="text-[10px] font-extrabold text-text-muted uppercase tracking-wider block mb-1 font-heading">
-            Average R
-          </span>
-          <span className="text-xl font-black text-lime tracking-tight block font-mono-num font-heading">
-            {analytics.averageR >= 0 ? '+' : ''}{analytics.averageR}R
-          </span>
-          <span className="text-[10px] text-text-muted mt-1 block font-medium font-mono-num">Risk Multiple Return</span>
-        </div>
-
-        {/* Max Drawdown */}
-        <div className="custom-card p-4">
-          <span className="text-[10px] font-extrabold text-text-muted uppercase tracking-wider block mb-1 font-heading">
-            Max Drawdown
-          </span>
-          <span className="text-xl font-black text-loss tracking-tight block font-mono-num font-heading">
-            {analytics.maxDrawdownPercent}%
-          </span>
-          <span className="text-[10px] text-text-muted mt-1 block font-medium font-mono-num">Peak-to-Trough Drop</span>
-        </div>
-      </div>
-
-      {/* Main Equity Curve Chart & Performance Breakdowns Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Equity Curve (2 cols) */}
-        <div className="lg:col-span-2 custom-card p-6 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-sm font-bold text-text-primary tracking-tight flex items-center gap-2 font-heading">
-                <TrendingUp className="w-4 h-4 text-lime" /> Equity Curve
-              </h2>
-              <p className="text-xs text-text-secondary">Cumulative account equity trajectory over executed trade history</p>
-            </div>
-            <span className="text-xs font-bold px-2 py-0.5 rounded bg-lime/10 text-lime border border-lime/20 font-heading">
-              Live Feed
+      {/* Hero Accent Performance Card */}
+      <div className="custom-card p-6 border-l-4 border-lime bg-bg-card flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-1">
+          <span className="text-xs font-bold text-lime uppercase tracking-widest font-heading">NET PERFORMANCE</span>
+          <div className="flex items-baseline gap-3">
+            <span className={`text-4xl font-black font-mono-num font-heading ${analytics.netPnL >= 0 ? 'text-lime' : 'text-loss'}`}>
+              {formatValue(analytics.netPnL)}
+            </span>
+            <span className="text-xs text-text-secondary font-mono-num">
+              {analytics.netPnL >= 0 ? '+' : ''}
+              {Math.round((analytics.netPnL / startingBalance) * 10000) / 100}% Return
             </span>
           </div>
+        </div>
 
-          <div className="h-72 w-full">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono-num border-t md:border-t-0 md:border-l border-bg-border pt-4 md:pt-0 md:pl-6">
+          <div>
+            <span className="text-[10px] text-text-muted font-bold uppercase block font-heading">Profit Factor</span>
+            <span className="text-lg font-bold text-text-primary">{analytics.profitFactor}</span>
+          </div>
+          <div>
+            <span className="text-[10px] text-text-muted font-bold uppercase block font-heading">Win Rate</span>
+            <span className="text-lg font-bold text-lime">{analytics.winRate}%</span>
+          </div>
+          <div>
+            <span className="text-[10px] text-text-muted font-bold uppercase block font-heading">Average R</span>
+            <span className="text-lg font-bold text-text-primary">+{analytics.averageR}R</span>
+          </div>
+          <div>
+            <span className="text-[10px] text-text-muted font-bold uppercase block font-heading">Max Drawdown</span>
+            <span className="text-lg font-bold text-loss">{analytics.maxDrawdownPercent}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Cards Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 font-mono-num">
+        <div className="custom-card p-4">
+          <span className="text-[10px] font-bold text-text-muted uppercase block font-heading mb-1">Account Balance</span>
+          <span className="text-xl font-black text-text-primary font-heading">{formatValue(currentBalance)}</span>
+        </div>
+        <div className="custom-card p-4">
+          <span className="text-[10px] font-bold text-text-muted uppercase block font-heading mb-1">Total Trades</span>
+          <span className="text-xl font-black text-text-primary font-heading">{analytics.totalTrades}</span>
+        </div>
+        <div className="custom-card p-4">
+          <span className="text-[10px] font-bold text-text-muted uppercase block font-heading mb-1">Average Win</span>
+          <span className="text-xl font-black text-lime font-heading">${analytics.averageWin}</span>
+        </div>
+        <div className="custom-card p-4">
+          <span className="text-[10px] font-bold text-text-muted uppercase block font-heading mb-1">Average Loss</span>
+          <span className="text-xl font-black text-loss font-heading">-${analytics.averageLoss}</span>
+        </div>
+        <div className="custom-card p-4">
+          <span className="text-[10px] font-bold text-text-muted uppercase block font-heading mb-1">Expectancy</span>
+          <span className="text-xl font-black text-lime font-heading">${analytics.expectancy}</span>
+        </div>
+        <div className="custom-card p-4">
+          <span className="text-[10px] font-bold text-text-muted uppercase block font-heading mb-1">Win Streak</span>
+          <span className="text-xl font-black text-lime font-heading flex items-center gap-1">
+            <Flame className="w-4 h-4 fill-lime" /> {analytics.currentWinStreak}
+          </span>
+        </div>
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Equity Curve Area Chart */}
+        <div className="lg:col-span-8 custom-card p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider font-heading">Account Equity Growth Curve</h3>
+            <span className="text-xs text-text-muted font-mono-num font-heading">Starting: ${startingBalance.toLocaleString()}</span>
+          </div>
+
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={equityData}>
+              <AreaChart data={equityCurveData}>
                 <defs>
-                  <linearGradient id="equityGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#C8FF00" stopOpacity={0.25} />
+                  <linearGradient id="equityLimeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#C8FF00" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#C8FF00" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
-                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
-                <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} domain={['auto', 'auto']} />
+                <XAxis dataKey="date" stroke="#6F767D" fontSize={10} tickLine={false} />
+                <YAxis stroke="#6F767D" fontSize={10} tickLine={false} domain={['auto', 'auto']} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-subtle)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
-                  formatter={(value: any) => [privacyMode ? '••••••' : `$${Number(value).toLocaleString()}`, 'Equity']}
+                  contentStyle={{ backgroundColor: '#15191D', borderColor: '#262B30', borderRadius: '8px', color: '#F5F5F5', fontSize: '11px' }}
                 />
-                <Area type="monotone" dataKey="equity" stroke="#C8FF00" strokeWidth={2.5} fillOpacity={1} fill="url(#equityGrad)" />
+                <Area type="monotone" dataKey="balance" stroke="#C8FF00" strokeWidth={2.5} fillOpacity={1} fill="url(#equityLimeGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Win/Loss & Instrument Breakdown (1 col) */}
-        <div className="space-y-6">
-          {/* Win/Loss Pie Chart */}
-          <div className="custom-card p-5">
-            <h3 className="text-xs font-bold text-text-primary tracking-tight mb-3 flex items-center gap-2 font-heading">
-              <PieIcon className="w-4 h-4 text-lime" /> Win / Loss Distribution
-            </h3>
-            <div className="h-44 flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={winLossData} cx="50%" cy="50%" innerRadius={45} outerRadius={65} paddingAngle={4} dataKey="value">
-                    {winLossData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-subtle)', borderRadius: '0.5rem' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex justify-around text-xs font-bold pt-2 border-t border-bg-border font-heading">
-              <span className="text-lime">{analytics.winningTrades} Wins</span>
-              <span className="text-loss">{analytics.losingTrades} Losses</span>
-              <span className="text-text-muted">{analytics.breakEvenTrades} BE</span>
-            </div>
+        {/* Win / Loss Donut Chart */}
+        <div className="lg:col-span-4 custom-card p-5 flex flex-col justify-between space-y-4">
+          <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider font-heading">Win / Loss Distribution</h3>
+          <div className="h-44 w-full flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={pieData} innerRadius={50} outerRadius={70} paddingAngle={4} dataKey="value">
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ backgroundColor: '#15191D', borderColor: '#262B30', color: '#F5F5F5', fontSize: '11px' }} />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
 
-          {/* Performance by Symbol */}
-          <div className="custom-card p-5">
-            <h3 className="text-xs font-bold text-text-primary tracking-tight mb-3 flex items-center gap-2 font-heading">
-              <Activity className="w-4 h-4 text-lime" /> Performance by Symbol
-            </h3>
-            <div className="space-y-2">
-              {instrumentData.map((item) => (
-                <div key={item.symbol} className="flex items-center justify-between text-xs p-2 rounded-lg bg-bg-nested border border-bg-border">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-text-primary font-heading">{item.symbol}</span>
-                    <span className="text-[10px] text-text-muted">({item.count} trades)</span>
-                  </div>
-                  <span className={`font-bold font-mono-num ${item.pnl >= 0 ? 'text-lime' : 'text-loss'}`}>
-                    {formatValue(item.pnl)}
-                  </span>
-                </div>
-              ))}
+          <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono-num">
+            <div className="p-2 rounded bg-bg-nested border border-bg-border">
+              <span className="text-[10px] text-text-muted block font-heading">Wins</span>
+              <span className="font-bold text-lime">{analytics.winningTrades}</span>
+            </div>
+            <div className="p-2 rounded bg-bg-nested border border-bg-border">
+              <span className="text-[10px] text-text-muted block font-heading">Losses</span>
+              <span className="font-bold text-loss">{analytics.losingTrades}</span>
+            </div>
+            <div className="p-2 rounded bg-bg-nested border border-bg-border">
+              <span className="text-[10px] text-text-muted block font-heading">Breakeven</span>
+              <span className="font-bold text-text-muted">{analytics.breakEvenTrades}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Recent Executions Table */}
-      <div className="custom-card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-sm font-bold text-text-primary tracking-tight font-heading">Recent Executions</h2>
-            <p className="text-xs text-text-secondary">Latest trade logs recorded into Mega Journal</p>
-          </div>
-          <Link href="/trades" className="text-xs font-bold text-lime hover:underline flex items-center gap-1 font-heading">
-            <span>View All Trades</span> <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
-
+      {/* Performance by Symbol Table */}
+      <div className="custom-card p-5 space-y-4">
+        <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider font-heading">Performance Breakdown by Instrument</h3>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-xs border-collapse font-mono-num">
             <thead>
-              <tr className="border-b border-bg-border text-text-muted font-bold text-[10px] uppercase tracking-wider font-heading">
-                <th className="py-2.5 px-3">Date</th>
+              <tr className="border-b border-bg-border text-text-muted uppercase text-[10px] font-heading font-bold">
                 <th className="py-2.5 px-3">Symbol</th>
-                <th className="py-2.5 px-3">Direction</th>
-                <th className="py-2.5 px-3">Entry / Exit</th>
-                <th className="py-2.5 px-3">R-Multiple</th>
-                <th className="py-2.5 px-3">Net P&L</th>
-                <th className="py-2.5 px-3">Setup</th>
+                <th className="py-2.5 px-3">Trades</th>
+                <th className="py-2.5 px-3">Win Rate</th>
+                <th className="py-2.5 px-3 text-right">Net P&L</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-bg-border">
-              {filteredTrades.slice(0, 5).map((t) => (
-                <tr key={t.id} className="hover:bg-bg-nested/60 transition-colors">
-                  <td className="py-3 px-3 text-text-secondary font-mono-num">{new Date(t.entryTime).toLocaleDateString()}</td>
-                  <td className="py-3 px-3 font-bold text-text-primary font-heading">{t.symbol}</td>
-                  <td className="py-3 px-3">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${t.direction === 'LONG' ? 'bg-lime/10 text-lime border border-lime/20' : 'bg-loss/10 text-loss border border-loss/20'}`}>
-                      {t.direction}
-                    </span>
+              {symbolList.map((item) => (
+                <tr key={item.symbol} className="hover:bg-bg-nested/60">
+                  <td className="py-3 px-3 font-bold text-text-primary font-heading">{item.symbol}</td>
+                  <td className="py-3 px-3 text-text-secondary">{item.count}</td>
+                  <td className="py-3 px-3 text-lime font-bold">{item.winRate}%</td>
+                  <td className={`py-3 px-3 text-right font-bold ${item.pnl >= 0 ? 'text-lime' : 'text-loss'}`}>
+                    {formatValue(item.pnl)}
                   </td>
-                  <td className="py-3 px-3 text-text-secondary font-mono-num">
-                    {t.entryPrice} → {t.exitPrice}
-                  </td>
-                  <td className="py-3 px-3 font-bold text-lime font-mono-num">{t.rMultiple >= 0 ? '+' : ''}{t.rMultiple}R</td>
-                  <td className={`py-3 px-3 font-bold font-mono-num ${t.netPnL >= 0 ? 'text-lime' : 'text-loss'}`}>
-                    {formatValue(t.netPnL)}
-                  </td>
-                  <td className="py-3 px-3 text-text-muted">{t.setup || 'General'}</td>
                 </tr>
               ))}
             </tbody>

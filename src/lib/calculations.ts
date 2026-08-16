@@ -1,7 +1,9 @@
-// Quantitative Trading Financial Calculations Engine for Mega Journal
+// Centralized Financial Calculations Engine for MEGA1
+// All monetary values, prices, and ratios are calculated with fixed decimal precision.
 
 export interface TradeInput {
-  id: string;
+  id?: string;
+  userId?: string;
   account: string;
   symbol: string;
   assetClass: 'FOREX' | 'FUTURES' | 'STOCKS' | 'CRYPTO' | 'INDICES' | 'COMMODITIES';
@@ -13,19 +15,24 @@ export interface TradeInput {
   takeProfit?: number;
   entryTime: string;
   exitTime?: string;
-  commission: number;
-  fees: number;
+  totalFees?: number;
+  commission?: number;
+  fees?: number;
   strategyId?: string;
   setup?: string;
+  session?: string;
   tags?: string[];
   mistake?: string;
   emotion?: string;
+  confidence?: number;
   rating?: number;
   notes?: string;
+  status?: 'OPEN' | 'CLOSED';
 }
 
 export interface TradeCalculated {
   id: string;
+  userId: string;
   account: string;
   symbol: string;
   assetClass: string;
@@ -51,13 +58,14 @@ export interface TradeCalculated {
   isBreakEven: boolean;
   strategyId?: string;
   setup?: string;
+  session?: string;
   tags: string[];
   mistake?: string;
   emotion?: string;
+  confidence?: number;
   rating?: number;
   notes?: string;
-  mae?: number; // Maximum Adverse Excursion
-  mfe?: number; // Maximum Favorable Excursion
+  status: 'OPEN' | 'CLOSED';
 }
 
 export interface AnalyticsSummary {
@@ -87,59 +95,68 @@ export interface AnalyticsSummary {
   currentLossStreak: number;
   maxWinStreak: number;
   maxLossStreak: number;
-  ruleAdherenceRate: number;
 }
 
 /**
- * Calculates metrics for an individual trade safely handling zero/null divisions.
+ * Calculates trade financial metrics with fixed decimal rounding.
  */
 export function calculateTradeMetrics(t: Partial<TradeInput>): TradeCalculated {
   const direction = t.direction || 'LONG';
   const entry = Number(t.entryPrice) || 0;
   const exit = Number(t.exitPrice) || 0;
   const qty = Number(t.quantity) || 1;
-  const fees = (Number(t.commission) || 0) + (Number(t.fees) || 0);
+  const fees = (Number(t.totalFees) || 0) + (Number(t.commission) || 0) + (Number(t.fees) || 0);
+  
   const sl = Number(t.stopLoss) || (direction === 'LONG' ? entry * 0.99 : entry * 1.01);
   const tp = Number(t.takeProfit) || (direction === 'LONG' ? entry * 1.02 : entry * 0.98);
 
-  // Asset multipliers (Contract sizes)
-  let multiplier = 1;
-  const asset = t.assetClass || 'FOREX';
-  if (asset === 'FOREX') {
-    // standard lot = 100,000 units
-    multiplier = qty >= 100 ? 1 : 100000;
-  } else if (asset === 'FUTURES') {
-    // E-mini / Micro futures contract multiplier (e.g. NQ $20/pt, ES $50/pt)
-    multiplier = t.symbol?.includes('NQ') || t.symbol?.includes('NAS') ? 20 : 50;
-  } else {
-    multiplier = 1;
-  }
+  const asset = t.assetClass || 'COMMODITIES';
 
-  // Raw Gross P&L
+  // Gross P&L Calculation
   let rawGross = 0;
-  if (direction === 'LONG') {
-    rawGross = (exit - entry) * qty * (asset === 'FOREX' && qty < 100 ? 100000 : 1);
+  if (asset === 'FOREX') {
+    const lotSize = qty < 100 ? 100000 : 1;
+    rawGross = direction === 'LONG' ? (exit - entry) * qty * lotSize : (entry - exit) * qty * lotSize;
+  } else if (asset === 'FUTURES' || asset === 'INDICES') {
+    const multiplier = t.symbol?.includes('NQ') || t.symbol?.includes('NAS') ? 20 : 50;
+    rawGross = direction === 'LONG' ? (exit - entry) * qty * multiplier : (entry - exit) * qty * multiplier;
   } else {
-    rawGross = (entry - exit) * qty * (asset === 'FOREX' && qty < 100 ? 100000 : 1);
+    rawGross = direction === 'LONG' ? (exit - entry) * qty : (entry - exit) * qty;
   }
 
   const grossPnL = Math.round(rawGross * 100) / 100;
   const netPnL = Math.round((grossPnL - fees) * 100) / 100;
 
-  // Risk calculation (Price distance to Stop Loss)
+  // Risk calculation
   let riskPerUnit = direction === 'LONG' ? Math.max(0, entry - sl) : Math.max(0, sl - entry);
-  if (riskPerUnit === 0) riskPerUnit = entry * 0.01; // 1% fallback
+  if (riskPerUnit === 0) riskPerUnit = entry * 0.01;
 
-  const initialRisk = Math.round(riskPerUnit * qty * (asset === 'FOREX' && qty < 100 ? 100000 : 1) * 100) / 100;
+  let initialRisk = 0;
+  if (asset === 'FOREX') {
+    initialRisk = Math.round(riskPerUnit * qty * (qty < 100 ? 100000 : 1) * 100) / 100;
+  } else if (asset === 'FUTURES' || asset === 'INDICES') {
+    const multiplier = t.symbol?.includes('NQ') || t.symbol?.includes('NAS') ? 20 : 50;
+    initialRisk = Math.round(riskPerUnit * qty * multiplier * 100) / 100;
+  } else {
+    initialRisk = Math.round(riskPerUnit * qty * 100) / 100;
+  }
 
-  // Reward calculation (Price distance to Take Profit)
+  // Reward calculation
   let rewardPerUnit = direction === 'LONG' ? Math.max(0, tp - entry) : Math.max(0, entry - tp);
-  const initialReward = Math.round(rewardPerUnit * qty * (asset === 'FOREX' && qty < 100 ? 100000 : 1) * 100) / 100;
+  let initialReward = 0;
+  if (asset === 'FOREX') {
+    initialReward = Math.round(rewardPerUnit * qty * (qty < 100 ? 100000 : 1) * 100) / 100;
+  } else if (asset === 'FUTURES' || asset === 'INDICES') {
+    const multiplier = t.symbol?.includes('NQ') || t.symbol?.includes('NAS') ? 20 : 50;
+    initialReward = Math.round(rewardPerUnit * qty * multiplier * 100) / 100;
+  } else {
+    initialReward = Math.round(rewardPerUnit * qty * 100) / 100;
+  }
 
   const riskRewardRatio = initialRisk > 0 ? Math.round((initialReward / initialRisk) * 100) / 100 : 0;
   const rMultiple = initialRisk > 0 ? Math.round((netPnL / initialRisk) * 100) / 100 : 0;
 
-  const capital = entry * qty * (asset === 'FOREX' && qty < 100 ? 100000 : 1);
+  const capital = entry * qty;
   const returnPercentage = capital > 0 ? Math.round((netPnL / capital) * 10000) / 100 : 0;
 
   // Duration
@@ -158,8 +175,9 @@ export function calculateTradeMetrics(t: Partial<TradeInput>): TradeCalculated {
 
   return {
     id: t.id || `trd-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-    account: t.account || 'Main Forex Account',
-    symbol: t.symbol || 'EURUSD',
+    userId: t.userId || 'usr-demo',
+    account: t.account || 'MEGA1 $10K Prop Account',
+    symbol: t.symbol || 'XAUUSD',
     assetClass: asset,
     direction,
     entryPrice: entry,
@@ -183,18 +201,19 @@ export function calculateTradeMetrics(t: Partial<TradeInput>): TradeCalculated {
     isBreakEven,
     strategyId: t.strategyId,
     setup: t.setup || 'General Setup',
+    session: t.session || 'NEW_YORK',
     tags: t.tags || [],
-    mistake: t.mistake,
-    emotion: t.emotion,
+    mistake: t.mistake || 'None',
+    emotion: t.emotion || 'Calm',
+    confidence: t.confidence || 8,
     rating: t.rating || 5,
     notes: t.notes || '',
-    mae: Math.round(initialRisk * 0.4 * 100) / 100,
-    mfe: Math.round(initialReward * 0.9 * 100) / 100,
+    status: t.status || 'CLOSED',
   };
 }
 
 /**
- * Calculates aggregate portfolio analytics safely across any subset of trades.
+ * Calculates aggregate portfolio stats safely across any set of trades.
  */
 export function calculateAnalyticsSummary(trades: TradeCalculated[], initialBalance: number = 10000): AnalyticsSummary {
   const totalTrades = trades.length;
@@ -226,7 +245,6 @@ export function calculateAnalyticsSummary(trades: TradeCalculated[], initialBala
       currentLossStreak: 0,
       maxWinStreak: 0,
       maxLossStreak: 0,
-      ruleAdherenceRate: 100,
     };
   }
 
@@ -256,19 +274,16 @@ export function calculateAnalyticsSummary(trades: TradeCalculated[], initialBala
 
   const payoffRatio = averageLoss > 0 ? Math.round((averageWin / averageLoss) * 100) / 100 : averageWin > 0 ? 99 : 0;
 
-  // Calculate Peak-to-Trough Drawdown & Equity Curve
+  // Peak-to-Trough Drawdown & Streaks
   let currentBalance = initialBalance;
   let peakBalance = initialBalance;
   let maxDrawdownAmount = 0;
   let maxDrawdownPercent = 0;
 
-  let currentWinStreak = 0;
-  let currentLossStreak = 0;
-  let maxWinStreak = 0;
-  let maxLossStreak = 0;
-
   let winStreakCount = 0;
   let lossStreakCount = 0;
+  let maxWinStreak = 0;
+  let maxLossStreak = 0;
 
   trades.forEach((t) => {
     currentBalance += t.netPnL;
@@ -292,15 +307,11 @@ export function calculateAnalyticsSummary(trades: TradeCalculated[], initialBala
     }
   });
 
-  currentWinStreak = winStreakCount;
-  currentLossStreak = lossStreakCount;
-
   maxDrawdownAmount = Math.round(maxDrawdownAmount * 100) / 100;
   maxDrawdownPercent = Math.round(maxDrawdownPercent * 100) / 100;
 
   const recoveryFactor = maxDrawdownAmount > 0 ? Math.round((netPnL / maxDrawdownAmount) * 100) / 100 : 99;
 
-  // Annualized metrics approximations (Sharpe & Sortino)
   const returns = trades.map((t) => t.returnPercentage);
   const meanReturn = returns.reduce((a, b) => a + b, 0) / totalTrades;
   const variance = returns.reduce((a, b) => a + Math.pow(b - meanReturn, 2), 0) / (totalTrades || 1);
@@ -337,10 +348,9 @@ export function calculateAnalyticsSummary(trades: TradeCalculated[], initialBala
     sharpeRatio,
     sortinoRatio,
     calmarRatio,
-    currentWinStreak,
-    currentLossStreak,
+    currentWinStreak: winStreakCount,
+    currentLossStreak: lossStreakCount,
     maxWinStreak,
     maxLossStreak,
-    ruleAdherenceRate: 88.5,
   };
 }

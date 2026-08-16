@@ -1,144 +1,164 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { TradeCalculated, calculateTradeMetrics, calculateAnalyticsSummary, AnalyticsSummary } from '@/lib/calculations';
-import { DEMO_ACCOUNTS, DEMO_PROP_FIRMS, DEMO_STRATEGIES, getInitialCalculatedTrades, AccountData, PropFirmData, StrategyData } from '@/lib/store';
+import React, { createContext, useContext, useState } from 'react';
+import {
+  TradeCalculated,
+  AnalyticsSummary,
+  calculateTradeMetrics,
+  calculateAnalyticsSummary,
+} from '@/lib/calculations';
+import {
+  AccountData,
+  PropFirmData,
+  StrategyData,
+  DEMO_ACCOUNTS,
+  DEMO_PROP_FIRMS,
+  DEMO_STRATEGIES,
+  getInitialCalculatedTrades,
+} from '@/lib/store';
 
-export type DisplayMode = 'DOLLAR' | 'PERCENT' | 'R_MULTIPLE' | 'PIPS';
-export type DateFilter = 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'LAST_30_DAYS';
 export type ThemeMode = 'dark' | 'light' | 'system';
+export type DisplayUnit = 'DOLLAR' | 'PERCENT' | 'R_MULTIPLE' | 'PIPS';
+export type DateRange = 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'LAST_30_DAYS';
 
 interface AppContextType {
   theme: ThemeMode;
-  setTheme: (mode: ThemeMode) => void;
+  setTheme: (t: ThemeMode) => void;
+
+  displayUnit: DisplayUnit;
+  setDisplayUnit: (u: DisplayUnit) => void;
+
+  dateRange: DateRange;
+  setDateRange: (d: DateRange) => void;
+
+  selectedAccount: string;
+  setSelectedAccount: (acc: string) => void;
+
+  isPrivacyMode: boolean;
+  setIsPrivacyMode: (p: boolean) => void;
+  setPrivacyMode: (p: boolean) => void;
+
+  isQuickAddOpen: boolean;
+  setIsQuickAddOpen: (o: boolean) => void;
+
+  isCommandPaletteOpen: boolean;
+  setIsCommandPaletteOpen: (o: boolean) => void;
+
   accounts: AccountData[];
-  selectedAccountId: string;
-  setSelectedAccountId: (id: string) => void;
-  dateFilter: DateFilter;
-  setDateFilter: (filter: DateFilter) => void;
-  displayMode: DisplayMode;
-  setDisplayMode: (mode: DisplayMode) => void;
-  privacyMode: boolean;
-  setPrivacyMode: (val: boolean | ((prev: boolean) => boolean)) => void;
-  trades: TradeCalculated[];
-  addTrade: (t: Partial<TradeCalculated>) => void;
-  deleteTrade: (id: string) => void;
-  updateTrade: (id: string, updated: Partial<TradeCalculated>) => void;
+  activeAccountData?: AccountData;
+  addAccount: (acc: AccountData) => void;
+  updateAccount: (id: string, updates: Partial<AccountData>) => void;
+  deleteAccount: (id: string) => void;
+
   propFirms: PropFirmData[];
+
   strategies: StrategyData[];
   addStrategy: (s: StrategyData) => void;
-  analytics: AnalyticsSummary;
+
+  trades: TradeCalculated[];
   filteredTrades: TradeCalculated[];
-  isQuickAddOpen: boolean;
-  setIsQuickAddOpen: (open: boolean) => void;
-  isCommandPaletteOpen: boolean;
-  setIsCommandPaletteOpen: (open: boolean) => void;
-  formatValue: (amount: number, unit?: DisplayMode, initialRisk?: number) => string;
+  analytics: AnalyticsSummary;
+
+  addTrade: (t: any) => void;
+  updateTrade: (id: string, updates: Partial<TradeCalculated>) => void;
+  deleteTrade: (id: string) => void;
+  duplicateTrade: (id: string) => void;
+
+  formatValue: (amount: number, unitOverride?: DisplayUnit, riskAmount?: number) => string;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeMode>('dark');
-  const [accounts, setAccounts] = useState<AccountData[]>(DEMO_ACCOUNTS);
-  const [selectedAccountId, setSelectedAccountId] = useState<string>('ALL');
-  const [dateFilter, setDateFilter] = useState<DateFilter>('ALL');
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('DOLLAR');
-  const [privacyMode, setPrivacyMode] = useState<boolean>(false);
-  const [trades, setTrades] = useState<TradeCalculated[]>([]);
-  const [propFirms, setPropFirms] = useState<PropFirmData[]>(DEMO_PROP_FIRMS);
-  const [strategies, setStrategies] = useState<StrategyData[]>(DEMO_STRATEGIES);
-  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [displayUnit, setDisplayUnit] = useState<DisplayUnit>('DOLLAR');
+  const [dateRange, setDateRange] = useState<DateRange>('ALL');
+  const [selectedAccount, setSelectedAccount] = useState<string>('ALL');
+  const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(false);
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
 
-  // Initialize theme & load saved preference
-  useEffect(() => {
-    const savedTheme = (localStorage.getItem('mj_theme') as ThemeMode) || 'dark';
-    setThemeState(savedTheme);
-    applyTheme(savedTheme);
-  }, []);
+  const [accounts, setAccounts] = useState<AccountData[]>(DEMO_ACCOUNTS);
+  const [propFirms] = useState<PropFirmData[]>(DEMO_PROP_FIRMS);
+  const [strategies, setStrategies] = useState<StrategyData[]>(DEMO_STRATEGIES);
+  const [trades, setTrades] = useState<TradeCalculated[]>(getInitialCalculatedTrades());
 
   const setTheme = (mode: ThemeMode) => {
     setThemeState(mode);
-    localStorage.setItem('mj_theme', mode);
-    applyTheme(mode);
-  };
-
-  const applyTheme = (mode: ThemeMode) => {
-    const html = document.documentElement;
-    if (mode === 'light') {
-      html.classList.remove('dark');
-      html.classList.add('light');
-    } else if (mode === 'dark') {
-      html.classList.remove('light');
-      html.classList.add('dark');
-    } else {
-      // System mode
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      html.classList.remove('light', 'dark');
-      html.classList.add(isDark ? 'dark' : 'light');
+    if (typeof window !== 'undefined') {
+      const root = document.documentElement;
+      root.classList.remove('dark', 'light');
+      if (mode === 'dark') {
+        root.classList.add('dark');
+      } else if (mode === 'light') {
+        root.classList.add('light');
+      } else {
+        const isDarkSystem = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        root.classList.add(isDarkSystem ? 'dark' : 'light');
+      }
     }
   };
 
-  // Initialize trade data
-  useEffect(() => {
-    const initial = getInitialCalculatedTrades();
-    setTrades(initial);
-  }, []);
+  const activeAccountData = accounts.find((a) => a.name === selectedAccount) || accounts[0];
 
-  // Keyboard shortcut for Command Palette (CTRL + K)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsCommandPaletteOpen((prev) => !prev);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // Filter trades based on active account and date filter
   const filteredTrades = trades.filter((t) => {
-    if (selectedAccountId !== 'ALL' && t.account !== selectedAccountId) {
-      const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
-      if (selectedAccount && t.account !== selectedAccount.name) {
-        return false;
-      }
-    }
+    if (selectedAccount !== 'ALL' && t.account !== selectedAccount) return false;
+    if (dateRange === 'ALL') return true;
 
-    if (dateFilter === 'ALL') return true;
     const tradeDate = new Date(t.entryTime);
     const now = new Date();
 
-    if (dateFilter === 'TODAY') {
+    if (dateRange === 'TODAY') {
       return tradeDate.toDateString() === now.toDateString();
-    } else if (dateFilter === 'THIS_WEEK') {
-      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      return tradeDate >= oneWeekAgo;
-    } else if (dateFilter === 'THIS_MONTH') {
+    }
+    if (dateRange === 'THIS_WEEK') {
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+      return tradeDate >= startOfWeek;
+    }
+    if (dateRange === 'THIS_MONTH') {
       return tradeDate.getMonth() === now.getMonth() && tradeDate.getFullYear() === now.getFullYear();
-    } else if (dateFilter === 'LAST_30_DAYS') {
+    }
+    if (dateRange === 'LAST_30_DAYS') {
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       return tradeDate >= thirtyDaysAgo;
     }
+
     return true;
   });
 
-  const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
-  const initialBalance = selectedAccount ? selectedAccount.startingBalance : 100000;
-  const analytics = calculateAnalyticsSummary(filteredTrades, initialBalance);
+  const startingBalance = activeAccountData ? activeAccountData.startingBalance : 10000;
+  const analytics = calculateAnalyticsSummary(filteredTrades, startingBalance);
 
-  const addTrade = (t: Partial<TradeCalculated>) => {
-    const calculated = calculateTradeMetrics(t as any);
-    setTrades((prev) => [calculated, ...prev]);
+  const addAccount = (acc: AccountData) => {
+    setAccounts((prev) => [...prev, acc]);
+  };
 
-    setAccounts((prev) =>
-      prev.map((acc) => {
-        if (acc.name === calculated.account || acc.id === selectedAccountId) {
-          return { ...acc, currentBalance: acc.currentBalance + calculated.netPnL };
+  const updateAccount = (id: string, updates: Partial<AccountData>) => {
+    setAccounts((prev) => prev.map((a) => (a.id === id ? { ...a, ...updates } : a)));
+  };
+
+  const deleteAccount = (id: string) => {
+    setAccounts((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const addStrategy = (s: StrategyData) => {
+    setStrategies((prev) => [...prev, s]);
+  };
+
+  const addTrade = (tInput: any) => {
+    const newTrade = calculateTradeMetrics(tInput);
+    setTrades((prev) => [newTrade, ...prev]);
+  };
+
+  const updateTrade = (id: string, updates: Partial<TradeCalculated>) => {
+    setTrades((prev) =>
+      prev.map((t) => {
+        if (t.id === id) {
+          const merged: any = { ...t, ...updates };
+          return calculateTradeMetrics(merged);
         }
-        return acc;
+        return t;
       })
     );
   };
@@ -147,36 +167,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTrades((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const updateTrade = (id: string, updated: Partial<TradeCalculated>) => {
-    setTrades((prev) =>
-      prev.map((t) => {
-        if (t.id === id) {
-          return calculateTradeMetrics({ ...t, ...updated } as any);
-        }
-        return t;
-      })
-    );
+  const duplicateTrade = (id: string) => {
+    const existing = trades.find((t) => t.id === id);
+    if (!existing) return;
+    const duplicated = calculateTradeMetrics({
+      ...(existing as any),
+      id: `trd-${Date.now()}`,
+      entryTime: new Date().toISOString(),
+    });
+    setTrades((prev) => [duplicated, ...prev]);
   };
 
-  const addStrategy = (s: StrategyData) => {
-    setStrategies((prev) => [...prev, s]);
-  };
+  const formatValue = (amount: number, unitOverride?: DisplayUnit, riskAmount: number = 100): string => {
+    if (isPrivacyMode) return '••••••';
+    const unit = unitOverride || displayUnit;
 
-  const formatValue = (amount: number, modeOverride?: DisplayMode, risk: number = 100): string => {
-    if (privacyMode) return '••••••';
-    const mode = modeOverride || displayMode;
-
-    if (mode === 'PERCENT') {
-      const pct = (amount / initialBalance) * 100;
+    if (unit === 'PERCENT') {
+      const base = activeAccountData ? activeAccountData.startingBalance : 10000;
+      const pct = (amount / base) * 100;
       return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
-    } else if (mode === 'R_MULTIPLE') {
-      const r = risk > 0 ? amount / risk : 0;
-      return `${r >= 0 ? '+' : ''}${r.toFixed(2)}R`;
-    } else if (mode === 'PIPS') {
-      return `${amount >= 0 ? '+' : ''}${Math.round(amount * 10)} pips`;
     }
-
-    return `${amount >= 0 ? '+' : '-'}\$${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (unit === 'R_MULTIPLE') {
+      const r = riskAmount > 0 ? amount / riskAmount : 0;
+      return `${r >= 0 ? '+' : ''}${r.toFixed(2)}R`;
+    }
+    return `${amount >= 0 ? '+' : ''}$${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
   };
 
   return (
@@ -184,28 +199,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       value={{
         theme,
         setTheme,
-        accounts,
-        selectedAccountId,
-        setSelectedAccountId,
-        dateFilter,
-        setDateFilter,
-        displayMode,
-        setDisplayMode,
-        privacyMode,
-        setPrivacyMode,
-        trades,
-        addTrade,
-        deleteTrade,
-        updateTrade,
-        propFirms,
-        strategies,
-        addStrategy,
-        analytics,
-        filteredTrades,
+        displayUnit,
+        setDisplayUnit,
+        dateRange,
+        setDateRange,
+        selectedAccount,
+        setSelectedAccount,
+        isPrivacyMode,
+        setIsPrivacyMode,
+        setPrivacyMode: setIsPrivacyMode,
         isQuickAddOpen,
         setIsQuickAddOpen,
         isCommandPaletteOpen,
         setIsCommandPaletteOpen,
+        accounts,
+        activeAccountData,
+        addAccount,
+        updateAccount,
+        deleteAccount,
+        propFirms,
+        strategies,
+        addStrategy,
+        trades,
+        filteredTrades,
+        analytics,
+        addTrade,
+        updateTrade,
+        deleteTrade,
+        duplicateTrade,
         formatValue,
       }}
     >
@@ -216,8 +237,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
 export function useApp() {
   const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
+  if (!context) throw new Error('useApp must be used within an AppProvider');
   return context;
 }

@@ -21,8 +21,8 @@ const ibmPlexSans = IBM_Plex_Sans({
 });
 
 export const metadata = {
-  title: 'MEGA JOURNAL — The Trading Performance Journal',
-  description: 'SaaS-grade professional trading journal, quantitative analytics platform, strategy playbooks, prop-firm risk monitoring, and AI analyst.',
+  title: 'MEGA1 — The Trading Performance Operating System',
+  description: 'SaaS-grade professional trading journal, quantitative analytics platform, strategy playbooks, and prop-firm risk monitoring.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

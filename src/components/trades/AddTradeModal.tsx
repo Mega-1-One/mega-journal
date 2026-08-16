@@ -8,7 +8,7 @@ import { X, Calculator, CheckCircle2 } from 'lucide-react';
 export function AddTradeModal() {
   const { isQuickAddOpen, setIsQuickAddOpen, accounts, strategies, addTrade } = useApp();
 
-  const [account, setAccount] = useState(accounts[0]?.name || '$100,000 Apex Funded Account');
+  const [account, setAccount] = useState(accounts[0]?.name || 'MEGA1 $10K Prop Account');
   const [symbol, setSymbol] = useState('XAUUSD');
   const [assetClass, setAssetClass] = useState<'FOREX' | 'FUTURES' | 'STOCKS' | 'CRYPTO' | 'INDICES' | 'COMMODITIES'>('COMMODITIES');
   const [direction, setDirection] = useState<'LONG' | 'SHORT'>('LONG');
@@ -21,6 +21,7 @@ export function AddTradeModal() {
   const [fees, setFees] = useState('2.00');
   const [strategyId, setStrategyId] = useState(strategies[0]?.id || '');
   const [setup, setSetup] = useState('Liquidity Sweep FVG');
+  const [session, setSession] = useState('NEW_YORK');
   const [emotion, setEmotion] = useState('Calm');
   const [mistake, setMistake] = useState('None');
   const [rating, setRating] = useState('5');
@@ -40,6 +41,7 @@ export function AddTradeModal() {
     fees: Number(fees) || 0,
     strategyId,
     setup,
+    session,
     mistake,
     emotion,
     rating: Number(rating) || 5,
@@ -63,6 +65,7 @@ export function AddTradeModal() {
       totalFees: (Number(commission) || 0) + (Number(fees) || 0),
       strategyId,
       setup,
+      session,
       emotion,
       mistake,
       rating: Number(rating) || 5,
@@ -83,7 +86,7 @@ export function AddTradeModal() {
               <Calculator className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-text-primary tracking-tight font-heading">Record New Trade</h3>
+              <h3 className="text-base font-bold text-text-primary tracking-tight font-heading">Manual Trade Entry</h3>
               <p className="text-xs text-text-secondary">P&L, R-Multiple, and Risk metrics auto-calculate in real time</p>
             </div>
           </div>
@@ -96,7 +99,7 @@ export function AddTradeModal() {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Live Calculated Stats Banner */}
+          {/* Live Preview Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-bg-card p-4 rounded-xl border border-bg-border">
             <div>
               <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block font-heading">Net P&L</span>
@@ -120,7 +123,7 @@ export function AddTradeModal() {
             </div>
           </div>
 
-          {/* Form Fields Grid */}
+          {/* Input Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
             <div>
               <label className="font-semibold text-text-secondary block mb-1">Trading Account</label>
@@ -214,7 +217,7 @@ export function AddTradeModal() {
             </div>
 
             <div>
-              <label className="font-semibold text-text-secondary block mb-1">Position Size (Lots/Contracts)</label>
+              <label className="font-semibold text-text-secondary block mb-1">Quantity (Lots/Contracts)</label>
               <input
                 type="number"
                 step="any"
@@ -250,7 +253,7 @@ export function AddTradeModal() {
 
           {/* Notes */}
           <div>
-            <label className="font-semibold text-text-secondary block mb-1 text-xs">Notes & Setup Thesis</label>
+            <label className="font-semibold text-text-secondary block mb-1 text-xs">Trade Notes & Thesis</label>
             <textarea
               rows={3}
               value={notes}
@@ -260,7 +263,7 @@ export function AddTradeModal() {
             />
           </div>
 
-          {/* Action Buttons */}
+          {/* Submit */}
           <div className="flex items-center justify-end gap-3 border-t border-bg-border pt-4">
             <button
               type="button"
@@ -274,7 +277,7 @@ export function AddTradeModal() {
               className="btn-primary-lime text-xs px-5 py-2.5 rounded-lg shadow flex items-center gap-1.5 font-heading font-black"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Save Trade to Mega Journal</span>
+              <span>Save Trade to MEGA1 Journal</span>
             </button>
           </div>
         </form>
