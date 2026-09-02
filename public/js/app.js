@@ -272,7 +272,7 @@ const renderSidebar = () => {
       </h3>
       <div class="nav-menu">
         ${g.items.filter(i => i.id !== 'admin' || (state.user && state.user.role === 'ADMIN')).map(i => `
-          <a href="#" class="nav-link ${state.activeView === i.id ? 'active' : ''}" onclick="navigateTo('${i.id}'); return false;">
+          <a href="#" class="nav-link ${state.activeView === i.id ? 'active' : ''}" onclick="navigateTo('${i.id}'); closeSidebar(); return false;">
             <i data-lucide="${i.icon}" style="width: 18px; height: 18px;"></i> ${i.name}
           </a>
         `).join('')}
@@ -282,7 +282,7 @@ const renderSidebar = () => {
 
   return `
     <aside class="sidebar">
-      <div class="logo-area" style="cursor: pointer" onclick="navigateTo('dashboard')">
+      <div class="logo-area" style="cursor: pointer" onclick="navigateTo('dashboard'); closeSidebar();">
         <div class="logo-icon"><span style="font-weight: 900; font-size: 15px;">MJ</span></div>
         <div>
           <h2 class="font-heading font-bold tracking-tight" style="font-size: 15px">MEGA <span class="text-accent">JOURNAL</span></h2>
@@ -309,6 +309,28 @@ const renderSidebar = () => {
       </div>
     </aside>
   `;
+};
+
+window.toggleSidebar = () => {
+  const sidebar = document.querySelector('.sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (sidebar) {
+    sidebar.classList.toggle('sidebar-open');
+    if (backdrop) {
+      if (sidebar.classList.contains('sidebar-open')) {
+        backdrop.classList.remove('hidden');
+      } else {
+        backdrop.classList.add('hidden');
+      }
+    }
+  }
+};
+
+window.closeSidebar = () => {
+  const sidebar = document.querySelector('.sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (sidebar) sidebar.classList.remove('sidebar-open');
+  if (backdrop) backdrop.classList.add('hidden');
 };
 
 window.toggleTheme = () => {
@@ -356,8 +378,141 @@ const renderTopbar = (title, subtitle) => {
 };
 
 
+/* ===== REDESIGNED EQUITYEDGE CALENDAR GENERATOR ===== */
+window.prevCalendarMonth = () => {
+  if (!state.calendarDate) state.calendarDate = new Date();
+  state.calendarDate.setMonth(state.calendarDate.getMonth() - 1);
+  renderView(state.activeView);
+};
+
+window.nextCalendarMonth = () => {
+  if (!state.calendarDate) state.calendarDate = new Date();
+  state.calendarDate.setMonth(state.calendarDate.getMonth() + 1);
+  renderView(state.activeView);
+};
+
+const renderEquityEdgeCalendar = () => {
+  const currentDate = state.calendarDate || new Date();
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  const firstDay = new Date(year, month, 1);
+  const startDayOfWeek = firstDay.getDay();
+
+  const gridStartDate = new Date(year, month, 1 - startDayOfWeek);
+
+  const tradesByDate = {};
+  if (state.trades && state.trades.length > 0) {
+    state.trades.forEach(t => {
+      const d = new Date(t.entryDate);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      if (!tradesByDate[key]) tradesByDate[key] = [];
+      tradesByDate[key].push(t);
+    });
+  }
+
+  const lastDayOfMonth = new Date(year, month + 1, 0);
+  const totalDaysInMonth = lastDayOfMonth.getDate();
+  const totalGridCells = (startDayOfWeek + totalDaysInMonth) > 35 ? 42 : 35;
+
+  let cellsHtml = '';
+  for (let i = 0; i < totalGridCells; i++) {
+    const cellDate = new Date(gridStartDate.getFullYear(), gridStartDate.getMonth(), gridStartDate.getDate() + i);
+    const isCurrentMonth = cellDate.getMonth() === month;
+    const isToday = cellDate.toDateString() === new Date().toDateString();
+    const dateKey = `${cellDate.getFullYear()}-${cellDate.getMonth()}-${cellDate.getDate()}`;
+    const dayTrades = tradesByDate[dateKey] || [];
+
+    let cellBg = isCurrentMonth ? 'var(--bg-card)' : 'rgba(10, 11, 13, 0.4)';
+    let borderStyle = 'border: 1px solid var(--border);';
+    let contentHtml = '';
+
+    if (dayTrades.length > 0) {
+      const dayPnL = dayTrades.reduce((acc, t) => acc + (t.netPnL || 0), 0);
+      const tradeCount = dayTrades.length;
+      const isWin = dayPnL >= 0;
+
+      const pnlColor = isWin ? '#22C55E' : '#EF4444';
+      const bgTint = isWin ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)';
+      const borderColor = isWin ? '#22C55E' : '#EF4444';
+      const formattedPnL = (isWin ? '+$' : '-$') + Math.abs(dayPnL).toFixed(2);
+
+      cellBg = bgTint;
+      borderStyle = `border: 1px solid ${borderColor}66; border-left: 3px solid ${borderColor};`;
+
+      contentHtml = `
+        <div style="margin-top: auto; font-family: var(--font-mono); font-size: 11px; display: flex; flex-direction: column; gap: 4px;">
+          <div style="display: flex; justify-content: space-between; color: var(--text-secondary);">
+            <span>Trades:</span>
+            <span style="font-weight: 700; color: var(--text-main);">${tradeCount}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; color: var(--text-secondary);">
+            <span>P&L:</span>
+            <span style="font-weight: 700; color: ${pnlColor};">${formattedPnL}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const dayNumberColor = isCurrentMonth 
+      ? (isToday ? 'var(--accent)' : 'var(--text-secondary)')
+      : 'var(--text-muted)';
+
+    cellsHtml += `
+      <div style="min-height: 110px; padding: 10px 12px; position: relative; background: ${cellBg}; ${borderStyle} display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s;">
+        <div style="display: flex; justify-content: flex-end; width: 100%;">
+          <span style="font-size: 12px; font-weight: 600; color: ${dayNumberColor};">
+            ${cellDate.getDate()}
+          </span>
+        </div>
+        ${contentHtml}
+      </div>
+    `;
+  }
+
+  const dayHeaders = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+  const dayHeadersHtml = dayHeaders.map(d => `
+    <div style="text-align: center; padding: 12px 6px; font-size: 11px; font-weight: 800; color: var(--text-secondary); letter-spacing: 0.08em; font-family: var(--font-heading); text-transform: uppercase; background: var(--bg-surface); border: 1px solid var(--border);">
+      ${d}
+    </div>
+  `).join('');
+
+  return `
+    <div class="calendar-wrapper mb-lg" style="border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: var(--bg-surface); box-shadow: 0 8px 30px rgba(0,0,0,0.4);">
+      <!-- Header with month navigation -->
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; background: var(--bg-surface); border-bottom: 1px solid var(--border);">
+        <button onclick="prevCalendarMonth()" class="btn-icon" style="background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-main);">
+          <i data-lucide="chevron-left" style="width: 18px; height: 18px;"></i>
+        </button>
+
+        <h3 style="font-size: 18px; font-weight: 700; font-family: var(--font-heading); color: var(--text-main); margin: 0; letter-spacing: -0.3px;">
+          ${monthNames[month]} ${year}
+        </h3>
+
+        <button onclick="nextCalendarMonth()" class="btn-icon" style="background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-main);">
+          <i data-lucide="chevron-right" style="width: 18px; height: 18px;"></i>
+        </button>
+      </div>
+
+      <!-- Responsive Calendar Grid -->
+      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <div style="min-width: 680px;">
+          <div style="display: grid; grid-template-columns: repeat(7, 1fr);">
+            ${dayHeadersHtml}
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(7, 1fr); background: var(--bg-dark);">
+            ${cellsHtml}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
 const BaseLayout = (title, subtitle, content) => `
   <div class="app-container animate-fade-in">
+    <div id="sidebar-backdrop" class="sidebar-backdrop hidden" onclick="closeSidebar()"></div>
     ${renderSidebar()}
     <main class="main-content">
       ${renderTopbar(title, subtitle)}
@@ -938,91 +1093,8 @@ const views = {
         </div>`;
       })() : ''}
 
-      <!-- Monthly Institutional Calendar Heatmap -->
-      ${(() => { // Redesigned Calendar always renders
-        const now = new Date();
-        const year = now.getFullYear(); const month = now.getMonth();
-        const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-        
-        let tradesByDateGlobal = {};
-        if (state.trades && state.trades.length > 0) {
-          state.trades.forEach(t => {
-            const d = new Date(t.entryDate);
-            const key = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
-            if (!tradesByDateGlobal[key]) tradesByDateGlobal[key] = [];
-            tradesByDateGlobal[key].push(t);
-          });
-        }
-
-        const monthStart = new Date(year, month, 1);
-        const startDate = new Date(monthStart);
-        // Rewind to the nearest Monday
-        const dayOfWeek = startDate.getDay();
-        startDate.setDate(startDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-        
-        let gridCells = '';
-        for (let w = 0; w < 6; w++) {
-          let hasMonthDays = false;
-          let rowCells = '';
-          for (let d = 1; d <= 5; d++) { // Mon - Fri
-            const current = new Date(startDate);
-            current.setDate(startDate.getDate() + (w * 7) + (d - 1));
-            
-            const isCurrentMonth = current.getMonth() === month;
-            if (isCurrentMonth) hasMonthDays = true;
-            
-            const dateKey = current.getFullYear() + '-' + current.getMonth() + '-' + current.getDate();
-            const dayTrades = tradesByDateGlobal[dateKey] || [];
-            
-            let cardsHtml = dayTrades.map(t => {
-              const isWin = t.netPnL >= 0;
-              const cardBg = isWin ? '#233930' : '#452b2b';
-              const badgeBg = isWin ? '#336145' : '#a14241';
-              const yesBadgeBg = isWin ? '#2f5b40' : '#593838';
-              const rr = t.riskRewardRatio || '1:' + Math.max(1, Math.abs(t.netPnL / ((t.positionSize||1)*10))).toFixed(1);
-              const actBal = getStartingBalance();
-              const pct = ((t.netPnL / actBal) * 100).toFixed(2);
-              const compliance = (t.emotion || 'calm').toLowerCase() === 'fomo' ? 'NO' : 'YES';
-              
-              return '<div style="background:'+cardBg+'; border-radius:6px; padding:8px; margin-bottom:8px; display:flex; flex-direction:column; gap:4px; font-family:sans-serif; text-align:left;">' +
-                '<div style="font-weight:700; font-size:13px; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + (t.symbol || 'TRADE') + '</div>' +
-                '<div><span style="display:inline-block; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:700; background:'+yesBadgeBg+'; color:rgba(255,255,255,0.9);">' + compliance + '</span></div>' +
-                '<div style="font-size:12px; color:rgba(255,255,255,0.85); margin-top:2px;">' + rr + '</div>' +
-                '<div style="font-size:12px; color:rgba(255,255,255,0.85);">' + pct + '%</div>' +
-                '<div style="margin-top:2px;"><span style="display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:700; background:'+badgeBg+'; color:#fff;">' + (isWin ? 'Win' : 'Loss') + '</span></div>' +
-              '</div>';
-            }).join('');
-
-            rowCells += '<div style="border-right:1px solid var(--border); border-bottom:1px solid var(--border); min-height:140px; position:relative; padding:32px 8px 8px 8px; background: ' + (isCurrentMonth ? 'transparent' : 'rgba(0,0,0,0.2)') + ';">' +
-              '<span style="position:absolute; top:8px; right:10px; font-size:12px; color: ' + (isCurrentMonth ? 'var(--text-secondary)' : 'var(--text-muted)') + '; font-family:sans-serif; font-weight:500;">' + current.getDate() + '</span>' +
-              cardsHtml +
-            '</div>';
-          }
-          if (hasMonthDays) {
-            gridCells += rowCells;
-          }
-        }
-        
-        return '<div class="mb-lg">' +
-          '<div class="flex justify-between items-center mb-md px-md">' +
-            '<h3 style="font-size:18px; font-weight:600; font-family:sans-serif; color:var(--text-main);">' + monthNames[month] + ' ' + year + '</h3>' +
-            '<div class="flex items-center gap-sm">' +
-              '<button class="btn btn-outline text-xs" style="padding:6px 12px; border-radius:6px; font-family:sans-serif; font-weight:500;"><i data-lucide="calendar" style="width:14px;height:14px;margin-right:6px;display:inline-block;vertical-align:middle;"></i> Manage in Calendar</button>' +
-              '<div style="display:flex; align-items:center; gap:12px; color:var(--text-secondary); font-family:sans-serif; font-size:14px; font-weight:500; margin-left:16px;">' +
-                '<i data-lucide="chevron-left" style="width:18px;height:18px;cursor:pointer;"></i> Today <i data-lucide="chevron-right" style="width:18px;height:18px;cursor:pointer;"></i>' +
-              '</div>' +
-            '</div>' +
-          '</div>' +
-          
-          '<div style="display:grid; grid-template-columns:repeat(5, 1fr); margin-bottom:8px;">' +
-            ['Mon','Tue','Wed','Thu','Fri'].map(d => '<div style="text-align:center; font-size:13px; font-family:sans-serif; font-weight:500; color:var(--text-muted);">' + d + '</div>').join('') +
-          '</div>' +
-          
-          '<div style="display:grid; grid-template-columns:repeat(5, 1fr); border-top:1px solid var(--border); border-left:1px solid var(--border); background:var(--bg-dark); border-radius:4px; overflow:hidden;">' +
-            gridCells +
-          '</div>' +
-        '</div>';
-      })()}
+      <!-- EquityEdge Redesigned Monthly Calendar -->
+      ${renderEquityEdgeCalendar()}
     `);
   },
 
