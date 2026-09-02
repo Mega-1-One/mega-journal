@@ -10,16 +10,63 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://ameyukeba175_db_user:7znYSrjPXEx639Qn@cluster0.s4fxl3w.mongodb.net/?appName=Cluster0';
 
-// Database Connection
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('MongoDB Atlas Connected Successfully'))
-  .catch(err => console.error('MongoDB Connection Error:', err));
+// Serverless Cached Database Connection
+let cached = global.mongoose;
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+async function connectDB() {
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 8000,
+    };
+
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
+      console.log('MongoDB Atlas Connected Successfully');
+      return mongooseInstance;
+    }).catch(err => {
+      cached.promise = null;
+      console.error('MongoDB Connection Error:', err);
+      throw err;
+    });
+  }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
+  }
+
+  return cached.conn;
+}
 
 // Middleware
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Database Connection Middleware for API routes
+app.use(async (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    try {
+      await connectDB();
+      next();
+    } catch (err) {
+      console.error('DB middleware failed:', err);
+      return res.status(500).json({ success: false, error: 'Database Connection Error: ' + err.message });
+    }
+  } else {
+    next();
+  }
+});
 
 // Static Files (No Cache for Development)
 app.use(express.static(path.join(__dirname, '../public'), {
