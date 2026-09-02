@@ -54,7 +54,11 @@ app.use((req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`🚀 MEGA JOURNAL server running on http://localhost:${PORT}`);
-});
+// Start Server (Local) or Export (Vercel)
+if (process.env.NODE_ENV !== 'production' && require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 MEGA JOURNAL server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;

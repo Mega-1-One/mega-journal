@@ -1721,26 +1721,6 @@ const fetchTrades = async () => {
   }
 };
 
-const fetchAccounts = async () => {
-  try {
-    const res = await fetch('/api/accounts', {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('mega_journal_token')}` }
-    });
-    if (res.ok) {
-      const data = await res.json();
-      state.accounts = data.accounts || [];
-      if (state.accounts.length > 0) {
-        state.activeAccount = state.accounts[0];
-      } else {
-        // Fallback default
-        state.activeAccount = { startingBalance: 10000, riskPerTrade: 1.0, maxDailyLossLimit: 500 };
-      }
-    }
-  } catch (err) {
-    console.error('Failed to fetch accounts', err);
-    state.activeAccount = { startingBalance: 10000, riskPerTrade: 1.0, maxDailyLossLimit: 500 };
-  }
-};
 
 const deleteTrade = async (id) => {
   if (!confirm('Are you sure you want to delete this trade?')) return;
@@ -1949,7 +1929,9 @@ window.navigateTo = navigateTo;
 /* ===== FETCH ACCOUNTS ===== */
 const fetchAccounts = async () => {
   try {
-    const res = await fetch('/api/accounts');
+    const res = await fetch('/api/accounts', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('mega_journal_token')}` }
+    });
     if (res.ok) {
       const data = await res.json();
       state.accounts = data.accounts || [];
