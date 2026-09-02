@@ -142,6 +142,59 @@
     </div>
   </div>
 
+  <!-- Add Account Modal -->
+  <div id="account-modal" class="modal-overlay hidden">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h3 class="font-heading text-lg font-bold">Connect / Create Trading Account</h3>
+        <button onclick="closeModal('account-modal')" class="btn-icon"><i data-lucide="x"></i></button>
+      </div>
+      <form id="account-form" onsubmit="event.preventDefault(); window.handleCreateAccount();">
+        <div class="modal-body pb-md">
+          <div class="grid grid-cols-2 gap-md mb-md">
+            <div>
+              <label class="input-label">ACCOUNT NAME</label>
+              <input type="text" id="acc-name" required class="input-field" placeholder="e.g. Primary Live">
+            </div>
+            <div>
+              <label class="input-label">BROKER / PROP FIRM</label>
+              <input type="text" id="acc-broker" required class="input-field" placeholder="e.g. FTMO, Oanda">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-md mb-md">
+            <div>
+              <label class="input-label">ACCOUNT TYPE</label>
+              <select id="acc-type" class="input-field">
+                <option value="PERSONAL">Personal / Broker</option>
+                <option value="PROP_FIRM">Prop Firm Challenge</option>
+                <option value="LIVE">Live Trade</option>
+                <option value="DEMO">Demo Tracker</option>
+              </select>
+            </div>
+            <div>
+              <label class="input-label">STARTING BALANCE ($)</label>
+              <input type="number" id="acc-balance" required min="100" class="input-field" placeholder="e.g. 50000">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-md">
+            <div>
+              <label class="input-label">MAX DAILY LOSS ($)</label>
+              <input type="number" id="acc-dailyloss" class="input-field" placeholder="Optional">
+            </div>
+            <div>
+              <label class="input-label">PROFIT TARGET ($)</label>
+              <input type="number" id="acc-profittarget" class="input-field" placeholder="Optional">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" onclick="closeModal('account-modal')" class="btn btn-outline">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Main Single Page Application Shell Root -->
   <div id="app-root">
     <div class="loading-screen">

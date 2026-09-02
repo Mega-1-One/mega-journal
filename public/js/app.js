@@ -1474,15 +1474,25 @@ const views = {
   accounts: () => BaseLayout("Trading Accounts", "Multi-account management and equity tracking.", `
     <div class="glass-panel">
       <div class="flex justify-between items-center mb-md">
-        <h3 class="font-heading font-bold text-sm">PRIMARY TRADING ACCOUNTS</h3>
-        <button onclick="showToast('Account creation ready')" class="btn btn-primary text-xs">+ Connect Account</button>
+        <h3 class="font-heading font-bold text-sm">TRADING ACCOUNTS</h3>
+        <button onclick="openModal('account-modal')" class="btn btn-primary text-xs">+ Connect Account</button>
       </div>
-      <div style="background:#0D0F14; padding:20px; border-radius:8px; border:1px solid var(--border);" class="font-mono">
-        <div class="flex justify-between items-center mb-xs">
-          <span class="font-bold text-accent">PRIMARY LIVE ACCOUNT</span>
-          <span class="text-xs text-profit">ACTIVE</span>
-        </div>
-        <div class="text-xl font-bold">$${(10000 + state.trades.reduce((acc,t)=>acc+t.netPnL, 0)).toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+      
+      <div class="grid grid-cols-1 gap-md">
+        ${state.accounts && state.accounts.length > 0 ? state.accounts.map(acc => `
+          <div style="background:#0D0F14; padding:20px; border-radius:8px; border:1px solid var(--border);" class="font-mono">
+            <div class="flex justify-between items-center mb-xs">
+              <span class="font-bold text-accent">${acc.name} (${acc.broker || 'Manual'})</span>
+              <span class="text-xs ${acc.status === 'ACTIVE' ? 'text-profit' : 'text-secondary'}">${acc.accountType} - ${acc.status}</span>
+            </div>
+            <div class="text-xl font-bold">$${acc.currentBalance.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+            <div class="text-xs text-secondary mt-xs">Starting Balance: $${acc.startingBalance.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+          </div>
+        `).join('') : `
+          <div style="padding:40px; text-align:center; color:var(--text-secondary);" class="font-mono text-sm">
+            No accounts connected yet. Click "+ Connect Account" to get started.
+          </div>
+        `}
       </div>
     </div>
   `),
@@ -1491,7 +1501,7 @@ const views = {
     <div class="glass-panel">
       <h3 class="font-heading font-bold text-sm mb-md">BROKER API GATEWAYS</h3>
       <p class="text-secondary text-xs mb-md">Direct read-only sync for MetaTrader 4/5, cTrader, and Interactive Brokers.</p>
-      <button onclick="showToast('Broker gateway active')" class="btn btn-outline text-xs">Connect Gateway</button>
+      <button onclick="openModal('account-modal')" class="btn btn-outline text-xs">Connect Gateway</button>
     </div>
   `),
 
@@ -1896,6 +1906,8 @@ const fetchTrades = async () => {
 };
 
 
+
+
 const deleteTrade = async (id) => {
   if (!confirm('Are you sure you want to delete this trade?')) return;
   try {
@@ -1947,7 +1959,43 @@ document.getElementById('trade-form')?.addEventListener('submit', async (e) => {
   }
 });
 
-window.handleImportSubmit = async () => {
+window.handleCreateAccount = async () => {
+  const accountData = {
+    name: document.getElementById('acc-name').value,
+    broker: document.getElementById('acc-broker').value,
+    accountType: document.getElementById('acc-type').value,
+    startingBalance: parseFloat(document.getElementById('acc-balance').value),
+    currentBalance: parseFloat(document.getElementById('acc-balance').value),
+    maxDailyLossLimit: parseFloat(document.getElementById('acc-dailyloss').value || 500),
+    profitTarget: parseFloat(document.getElementById('acc-profittarget').value || 1000)
+  };
+
+  try {
+    const token = localStorage.getItem('mega_journal_token');
+    const res = await fetch('/api/accounts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify(accountData)
+    });
+    
+    if (res.ok) {
+      showToast('Account created successfully!', 'success');
+      closeModal('account-modal');
+      await fetchAccounts();
+      renderView('accounts');
+    } else {
+      const data = await res.json();
+      showToast(data.error || 'Failed to create account', 'error');
+    }
+  } catch (err) {
+    showToast('Network error while creating account', 'error');
+  }
+};
+
+window.handleTradeSubmit = async () => {
   const text = document.getElementById('import-data-text').value;
   try {
     const parsed = JSON.parse(text);
