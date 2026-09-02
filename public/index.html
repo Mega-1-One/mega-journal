@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MEGA JOURNAL — The institutional-grade trading performance journal and operating system for disciplined retail & prop firm traders.">
+  <meta name="theme-color" content="#07080A">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230D0F14'/><text x='50%' y='65%' font-family='sans-serif' font-weight='900' font-size='50' fill='%23FFA53D' text-anchor='middle'>MJ</text></svg>">
+  <title>MEGA JOURNAL — Trading Performance Operating System</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Hand-written Custom Dark SaaS CSS -->
+  <link rel="stylesheet" href="/css/style.css?v=3.0">
+  <style>
+    .hidden { display: none !important; }
+    .modal-overlay.hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Command Palette Modal (Ctrl+K) -->
+  <div id="command-palette" class="modal-overlay hidden">
+    <div class="command-palette-box">
+      <div class="command-input-wrapper">
+        <i data-lucide="search"></i>
+        <input type="text" id="command-search-input" placeholder="Type a command or search page (e.g. 'Trade Log', 'AI Analyst', 'Risk Center')..." autofocus>
+        <span class="command-badge">ESC</span>
+      </div>
+      <div id="command-results" class="command-results-list">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Trade Modal -->
+  <div id="trade-modal" class="modal-overlay hidden">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h3 id="trade-modal-title" class="font-heading text-lg font-bold">Log New Trade</h3>
+        <button onclick="closeModal('trade-modal')" class="btn-icon"><i data-lucide="x"></i></button>
+      </div>
+      <form id="trade-form" class="modal-body">
+        <input type="hidden" id="trade-id">
+        <div class="grid grid-cols-2 gap-md mb-md">
+          <div>
+            <label class="input-label">SYMBOL</label>
+            <input type="text" id="trade-symbol" class="input-field" required placeholder="e.g. NAS100, EURUSD">
+          </div>
+          <div>
+            <label class="input-label">DIRECTION</label>
+            <select id="trade-direction" class="input-field">
+              <option value="Long">Long (Buy)</option>
+              <option value="Short">Short (Sell)</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-md mb-md">
+          <div>
+            <label class="input-label">ENTRY PRICE</label>
+            <input type="number" step="any" id="trade-entry" class="input-field" required placeholder="0.00">
+          </div>
+          <div>
+            <label class="input-label">EXIT PRICE</label>
+            <input type="number" step="any" id="trade-exit" class="input-field" required placeholder="0.00">
+          </div>
+          <div>
+            <label class="input-label">LOT / SIZE</label>
+            <input type="number" step="any" id="trade-size" class="input-field" required placeholder="1.0">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-md mb-md">
+          <div>
+            <label class="input-label">STOP LOSS</label>
+            <input type="number" step="any" id="trade-sl" class="input-field" placeholder="0.00">
+          </div>
+          <div>
+            <label class="input-label">TAKE PROFIT</label>
+            <input type="number" step="any" id="trade-tp" class="input-field" placeholder="0.00">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-md mb-md">
+          <div>
+            <label class="input-label">EMOTION / STATE</label>
+            <select id="trade-emotion" class="input-field">
+              <option value="CALM">😌 Calm & Focused</option>
+              <option value="FOMO">⚡ FOMO Entry</option>
+              <option value="GREED">🤑 Greed / Oversized</option>
+              <option value="ANXIETY">😰 Anxious</option>
+              <option value="REVENGE">🔥 Revenge Trade</option>
+            </select>
+          </div>
+          <div>
+            <label class="input-label">TAGS (comma separated)</label>
+            <input type="text" id="trade-tags" class="input-field" placeholder="ICT, SilverBullet, London">
+          </div>
+        </div>
+        <div class="mb-lg">
+          <label class="input-label">NOTES & LESSONS</label>
+          <textarea id="trade-notes" class="input-field" rows="3" placeholder="What went well? Did you stick to your plan?"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" onclick="closeModal('trade-modal')" class="btn btn-outline">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Trade</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CSV Import Modal -->
+  <div id="import-modal" class="modal-overlay hidden">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h3 class="font-heading text-lg font-bold">Import Trades (JSON/CSV)</h3>
+        <button onclick="closeModal('import-modal')" class="btn-icon"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;margin-bottom:16px;cursor:pointer;" onclick="document.getElementById('csv-file-input').click()">
+          <i data-lucide="upload-cloud" style="width:32px;height:32px;margin:0 auto 8px;display:block;color:var(--accent)"></i>
+          <p class="text-sm font-bold mb-xs">Drop CSV, JSON, or MT4/MT5 export file here</p>
+          <p class="text-xs text-secondary">or click to browse</p>
+          <input type="file" id="csv-file-input" accept=".csv,.json,.txt" style="display:none" onchange="handleCSVFile(this)">
+        </div>
+        <p class="text-secondary text-xs mb-sm">Or paste trade data manually below:</p>
+        <textarea id="import-data-text" class="input-field font-mono" rows="6" placeholder='[{"symbol":"EURUSD","direction":"Long","entryPrice":1.085,"exitPrice":1.089,"positionSize":1,"netPnL":400}]'></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('import-modal')" class="btn btn-outline">Cancel</button>
+        <button type="button" onclick="handleImportSubmit()" class="btn btn-primary">Process Import</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Single Page Application Shell Root -->
+  <div id="app-root">
+    <div class="loading-screen">
+      <div class="logo-icon animate-pulse"><span style="font-weight: 900; font-size: 16px;">MJ</span></div>
+      <p class="text-sm font-mono mt-md text-secondary">Launching Mega Journal Performance OS...</p>
+    </div>
+  </div>
+
+  <!-- Application Main JS -->
+  <script src="/js/app.js?v=4.0"></script>
+</body>
+</html>
