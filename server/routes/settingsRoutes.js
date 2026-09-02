@@ -35,6 +35,12 @@ router.put('/settings', async (req, res) => {
   res.json({ success: true, user });
 });
 
+router.put('/settings/mood', async (req, res) => {
+  const { moodHistory } = req.body;
+  const user = await User.findByIdAndUpdate(req.user._id, { $set: { moodHistory } }, { new: true });
+  res.json({ success: true, moodHistory: user.moodHistory });
+});
+
 // --- ADMIN ---
 router.get('/admin/users', adminMiddleware, async (req, res) => {
   const users = await User.find().select('-passwordHash');

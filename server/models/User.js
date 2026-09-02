@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema({
   googleId: { type: String, default: null },
   resetPasswordToken: { type: String, default: null },
   resetPasswordExpires: { type: Date, default: null },
+  moodHistory: { type: [{ date: String, mood: String }], default: [] },
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

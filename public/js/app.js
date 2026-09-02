@@ -2033,12 +2033,22 @@ window.exportPDFReport = () => {
 };
 
 /* ===== DAILY MOOD TRACKER ===== */
-window.setDailyMood = (mood) => {
+window.setDailyMood = async (mood) => {
   state.dailyMood = mood;
   const today = new Date().toISOString().slice(0, 10);
   state.moodHistory = state.moodHistory.filter(m => m.date !== today);
   state.moodHistory.push({ date: today, mood });
-  localStorage.setItem('moodHistory', JSON.stringify(state.moodHistory));
+  
+  try {
+    if (state.user) {
+      await fetch('/api/settings/mood', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('mega_journal_token')}` },
+        body: JSON.stringify({ moodHistory: state.moodHistory })
+      });
+    }
+  } catch(e) { console.warn('Failed to sync mood to DB', e); }
+  
   showToast(`Mood set to ${mood}`);
   renderView(state.activeView);
 };
@@ -2079,9 +2089,6 @@ const init = async () => {
     }
   });
 
-  // Load mood history
-  try { state.moodHistory = JSON.parse(localStorage.getItem('moodHistory') || '[]'); } catch(_) {}
-
   setupCommandPalette();
 
   // Global keyboard shortcuts
@@ -2097,6 +2104,7 @@ const init = async () => {
     if (res.ok) {
       const data = await res.json();
       state.user = data.user;
+      state.moodHistory = state.user.moodHistory || [];
       await Promise.all([fetchTrades(), fetchAccounts()]);
       checkDrawdownAlert();
     }
