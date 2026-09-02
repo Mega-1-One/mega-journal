@@ -936,40 +936,88 @@ const views = {
         </div>`;
       })() : ''}
 
-      <!-- Monthly P&L Calendar Heatmap -->
-      ${totalTrades > 0 ? (() => {
+      <!-- Monthly Institutional Calendar Heatmap -->
+      ${totalTrades > 0 ? (() => { // Redesigned Calendar
         const now = new Date();
         const year = now.getFullYear(); const month = now.getMonth();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const firstDay = new Date(year, month, 1).getDay();
         const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-        const pnlByDate = {};
+        
+        let tradesByDateGlobal = {};
         state.trades.forEach(t => {
           const d = new Date(t.entryDate);
-          if (d.getFullYear() === year && d.getMonth() === month) {
-            const key = d.getDate();
-            pnlByDate[key] = (pnlByDate[key] || 0) + t.netPnL;
-          }
+          const key = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+          if (!tradesByDateGlobal[key]) tradesByDateGlobal[key] = [];
+          tradesByDateGlobal[key].push(t);
         });
-        let cells = '';
-        for (let i = 0; i < firstDay; i++) cells += '<div></div>';
-        for (let d = 1; d <= daysInMonth; d++) {
-          const pnl = pnlByDate[d];
-          const bg = pnl > 0 ? 'var(--profit-glow)' : pnl < 0 ? 'var(--loss-glow)' : 'var(--bg-dark)';
-          const border = pnl > 0 ? 'var(--profit)' : pnl < 0 ? 'var(--loss)' : 'var(--border)';
-          const color = pnl > 0 ? 'var(--profit)' : pnl < 0 ? 'var(--loss)' : 'var(--text-secondary)';
-          cells += `<div style="background:${bg};border:1px solid ${border};border-radius:6px;padding:6px 2px;text-align:center;min-height:50px;">
-            <span style="font-size:10px;color:var(--text-muted);display:block;">${d}</span>
-            ${pnl !== undefined ? `<span style="font-size:10px;font-weight:700;color:${color};display:block;margin-top:2px;">${pnl >= 0 ? '+' : ''}$${pnl.toFixed(0)}</span>` : ''}
-          </div>`;
+
+        const monthStart = new Date(year, month, 1);
+        const startDate = new Date(monthStart);
+        // Rewind to the nearest Monday
+        const dayOfWeek = startDate.getDay();
+        startDate.setDate(startDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+        
+        let gridCells = '';
+        for (let w = 0; w < 6; w++) {
+          let hasMonthDays = false;
+          let rowCells = '';
+          for (let d = 1; d <= 5; d++) { // Mon - Fri
+            const current = new Date(startDate);
+            current.setDate(startDate.getDate() + (w * 7) + (d - 1));
+            
+            const isCurrentMonth = current.getMonth() === month;
+            if (isCurrentMonth) hasMonthDays = true;
+            
+            const dateKey = current.getFullYear() + '-' + current.getMonth() + '-' + current.getDate();
+            const dayTrades = tradesByDateGlobal[dateKey] || [];
+            
+            let cardsHtml = dayTrades.map(t => {
+              const isWin = t.netPnL >= 0;
+              const cardBg = isWin ? '#233930' : '#452b2b';
+              const badgeBg = isWin ? '#336145' : '#a14241';
+              const yesBadgeBg = isWin ? '#2f5b40' : '#593838';
+              const rr = t.riskRewardRatio || '1:' + Math.max(1, Math.abs(t.netPnL / ((t.positionSize||1)*10))).toFixed(1);
+              const actBal = getStartingBalance();
+              const pct = ((t.netPnL / actBal) * 100).toFixed(2);
+              const compliance = (t.emotion || 'calm').toLowerCase() === 'fomo' ? 'NO' : 'YES';
+              
+              return '<div style="background:'+cardBg+'; border-radius:6px; padding:8px; margin-bottom:8px; display:flex; flex-direction:column; gap:4px; font-family:sans-serif; text-align:left;">' +
+                '<div style="font-weight:700; font-size:13px; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + t.symbol + '</div>' +
+                '<div><span style="display:inline-block; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:700; background:'+yesBadgeBg+'; color:rgba(255,255,255,0.9);">' + compliance + '</span></div>' +
+                '<div style="font-size:12px; color:rgba(255,255,255,0.85); margin-top:2px;">' + rr + '</div>' +
+                '<div style="font-size:12px; color:rgba(255,255,255,0.85);">' + pct + '%</div>' +
+                '<div style="margin-top:2px;"><span style="display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:700; background:'+badgeBg+'; color:#fff;">' + (isWin ? 'Win' : 'Loss') + '</span></div>' +
+              '</div>';
+            }).join('');
+
+            rowCells += '<div style="border-right:1px solid var(--border); border-bottom:1px solid var(--border); min-height:140px; position:relative; padding:32px 8px 8px 8px; background: ' + (isCurrentMonth ? 'transparent' : 'rgba(0,0,0,0.2)') + ';">' +
+              '<span style="position:absolute; top:8px; right:10px; font-size:12px; color: ' + (isCurrentMonth ? 'var(--text-secondary)' : 'var(--text-muted)') + '; font-family:sans-serif; font-weight:500;">' + current.getDate() + '</span>' +
+              cardsHtml +
+            '</div>';
+          }
+          if (hasMonthDays) {
+            gridCells += rowCells;
+          }
         }
-        return `<div class="glass-panel mb-lg">
-          <h3 class="font-heading text-sm font-bold mb-md">MONTHLY P&L CALENDAR — ${monthNames[month]} ${year}</h3>
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;" class="font-mono">
-            ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div style="text-align:center;font-size:10px;font-weight:700;color:var(--text-muted);padding:4px;">${d}</div>`).join('')}
-            ${cells}
-          </div>
-        </div>`;
+        
+        return '<div class="mb-lg">' +
+          '<div class="flex justify-between items-center mb-md px-md">' +
+            '<h3 style="font-size:18px; font-weight:600; font-family:sans-serif; color:var(--text-main);">' + monthNames[month] + ' ' + year + '</h3>' +
+            '<div class="flex items-center gap-sm">' +
+              '<button class="btn btn-outline text-xs" style="padding:6px 12px; border-radius:6px; font-family:sans-serif; font-weight:500;"><i data-lucide="calendar" style="width:14px;height:14px;margin-right:6px;display:inline-block;vertical-align:middle;"></i> Manage in Calendar</button>' +
+              '<div style="display:flex; align-items:center; gap:12px; color:var(--text-secondary); font-family:sans-serif; font-size:14px; font-weight:500; margin-left:16px;">' +
+                '<i data-lucide="chevron-left" style="width:18px;height:18px;cursor:pointer;"></i> Today <i data-lucide="chevron-right" style="width:18px;height:18px;cursor:pointer;"></i>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          
+          '<div style="display:grid; grid-template-columns:repeat(5, 1fr); margin-bottom:8px;">' +
+            ['Mon','Tue','Wed','Thu','Fri'].map(d => '<div style="text-align:center; font-size:13px; font-family:sans-serif; font-weight:500; color:var(--text-muted);">' + d + '</div>').join('') +
+          '</div>' +
+          
+          '<div style="display:grid; grid-template-columns:repeat(5, 1fr); border-top:1px solid var(--border); border-left:1px solid var(--border); background:var(--bg-dark); border-radius:4px; overflow:hidden;">' +
+            gridCells +
+          '</div>' +
+        '</div>';
       })() : ''}
     `);
   },
