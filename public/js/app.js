@@ -114,15 +114,35 @@ window.updateAccountBalance = (val) => {
 window.updateAccountField = (field, val) => {
   if (state.activeAccount) { state.activeAccount[field] = parseFloat(val); }
 };
-window.saveSettings = () => {
+window.saveSettings = async () => {
   const balInput = document.getElementById('settings-balance');
   const riskInput = document.getElementById('settings-risk');
   const lossInput = document.getElementById('settings-daily-loss');
   if (balInput && riskInput && lossInput && state.activeAccount) {
+    const btn = document.querySelector('button[onclick="saveSettings()"]');
+    if (btn) btn.innerText = "Saving...";
+    
     state.activeAccount.startingBalance = Math.max(5000, parseFloat(balInput.value));
     state.activeAccount.riskPerTrade = parseFloat(riskInput.value);
     state.activeAccount.maxDailyLossLimit = parseFloat(lossInput.value);
-    showToast('Settings saved successfully!', 'success');
+    
+    try {
+      const res = await fetch(`/api/accounts/${state.activeAccount._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('mega_journal_token')}` },
+        body: JSON.stringify({
+          startingBalance: state.activeAccount.startingBalance,
+          riskPerTrade: state.activeAccount.riskPerTrade,
+          maxDailyLossLimit: state.activeAccount.maxDailyLossLimit
+        })
+      });
+      if (!res.ok) throw new Error('Api returned error');
+      showToast('Settings saved successfully!', 'success');
+    } catch (err) {
+      showToast('Error syncing with database', 'error');
+    }
+    
+    if (btn) btn.innerText = "Save Changes";
     renderView('settings');
   }
 };
@@ -1698,6 +1718,27 @@ const fetchTrades = async () => {
     }
   } catch (err) {
     console.error('Failed to fetch trades', err);
+  }
+};
+
+const fetchAccounts = async () => {
+  try {
+    const res = await fetch('/api/accounts', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('mega_journal_token')}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      state.accounts = data.accounts || [];
+      if (state.accounts.length > 0) {
+        state.activeAccount = state.accounts[0];
+      } else {
+        // Fallback default
+        state.activeAccount = { startingBalance: 10000, riskPerTrade: 1.0, maxDailyLossLimit: 500 };
+      }
+    }
+  } catch (err) {
+    console.error('Failed to fetch accounts', err);
+    state.activeAccount = { startingBalance: 10000, riskPerTrade: 1.0, maxDailyLossLimit: 500 };
   }
 };
 
