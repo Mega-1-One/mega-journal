@@ -18,6 +18,11 @@ router.post('/journal', async (req, res) => {
   res.json({ success: true, entry });
 });
 
+router.put('/journal/:id', async (req, res) => {
+  const entry = await JournalEntry.findOneAndUpdate({ _id: req.params.id, userId: req.user._id }, { $set: req.body }, { new: true });
+  res.json({ success: true, entry });
+});
+
 router.delete('/journal/:id', async (req, res) => {
   await JournalEntry.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
   res.json({ success: true });

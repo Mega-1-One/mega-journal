@@ -155,9 +155,30 @@ router.post('/', async (req, res) => {
 // PUT /api/trades/:id - Update trade
 router.put('/:id', async (req, res) => {
   try {
+    const updateData = { ...req.body };
+
+    // Recalculate P&L if price fields are present
+    if (updateData.entryPrice !== undefined && updateData.exitPrice !== undefined && updateData.positionSize !== undefined) {
+      const dir = updateData.direction || 'Long';
+      let pnl;
+      if (dir === 'Long') {
+        pnl = (parseFloat(updateData.exitPrice) - parseFloat(updateData.entryPrice)) * parseFloat(updateData.positionSize);
+      } else {
+        pnl = (parseFloat(updateData.entryPrice) - parseFloat(updateData.exitPrice)) * parseFloat(updateData.positionSize);
+      }
+      updateData.netPnL = parseFloat(pnl.toFixed(2));
+      updateData.winLoss = pnl > 0 ? 'WIN' : (pnl < 0 ? 'LOSS' : 'BREAKEVEN');
+
+      if (updateData.stopLoss && updateData.entryPrice && parseFloat(updateData.stopLoss) !== parseFloat(updateData.entryPrice)) {
+        const risk = Math.abs(parseFloat(updateData.entryPrice) - parseFloat(updateData.stopLoss));
+        const reward = Math.abs(parseFloat(updateData.exitPrice) - parseFloat(updateData.entryPrice));
+        updateData.riskRewardRatio = parseFloat((reward / risk).toFixed(2));
+      }
+    }
+
     const trade = await Trade.findOneAndUpdate(
       { _id: req.params.id, userId: req.user._id },
-      { $set: req.body },
+      { $set: updateData },
       { new: true }
     );
     if (!trade) return res.status(404).json({ success: false, error: 'Trade not found' });

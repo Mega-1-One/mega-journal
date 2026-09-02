@@ -948,8 +948,9 @@ const views = {
                     <td class="font-mono">${t.exitPrice}</td>
                     <td class="font-mono">${t.positionSize}</td>
                     <td class="font-mono font-bold ${t.netPnL >= 0 ? 'text-profit' : 'text-loss'}">${t.netPnL >= 0 ? '+' : ''}$${t.netPnL}</td>
-                    <td>
-                      <button onclick="deleteTrade('${t._id}')" class="btn-icon text-loss"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+                    <td class="flex gap-xs">
+                      <button onclick="window.openEditTradeModal('${t._id}')" class="btn-icon text-secondary" title="Edit Trade"><i data-lucide="edit-3" style="width:14px;height:14px"></i></button>
+                      <button onclick="deleteTrade('${t._id}')" class="btn-icon text-loss" title="Delete Trade"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
                     </td>
                   </tr>
                 `).join('')
@@ -1006,8 +1007,9 @@ const views = {
                 <td class="font-mono">${t.riskRewardRatio || '1:2.0'}</td>
                 <td class="font-mono font-bold ${t.netPnL >= 0 ? 'text-profit' : 'text-loss'}">${t.netPnL >= 0 ? '+' : ''}$${t.netPnL}</td>
                 <td class="text-xs text-secondary">${(t.tags || []).join(', ')}</td>
-                <td>
-                  <button onclick="deleteTrade('${t._id}')" class="btn-icon text-loss"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+                <td class="flex gap-xs">
+                  <button onclick="window.openEditTradeModal('${t._id}')" class="btn-icon text-secondary" title="Edit Trade"><i data-lucide="edit-3" style="width:14px;height:14px"></i></button>
+                  <button onclick="deleteTrade('${t._id}')" class="btn-icon text-loss" title="Delete Trade"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
                 </td>
               </tr>
             `).join('')}
@@ -1309,17 +1311,29 @@ const views = {
     <div class="glass-panel">
       <div class="flex justify-between items-center mb-md">
         <h3 class="font-heading font-bold text-sm">TRADING PLAYBOOKS</h3>
-        <button onclick="showToast('Playbook creator active')" class="btn btn-primary text-xs">+ Create Playbook</button>
+        <button onclick="window.openAddPlaybookModal()" class="btn btn-primary text-xs">+ Create Playbook</button>
       </div>
       <div class="grid grid-cols-2 gap-md">
-        <div style="background:#0D0F14; padding:20px; border-radius:8px; border:1px solid var(--border);">
-          <div class="flex justify-between items-center mb-xs">
-            <h4 class="font-heading font-bold text-accent">Liquidity Sweep & Reversal</h4>
-            <span class="text-xs font-mono text-profit">75% Win Rate</span>
+        ${(state.playbooks && state.playbooks.length > 0) ? state.playbooks.map(pb => `
+          <div style="background:#0D0F14; padding:20px; border-radius:8px; border:1px solid var(--border);">
+            <div class="flex justify-between items-center mb-xs">
+              <h4 class="font-heading font-bold text-accent">${pb.title || pb.name || 'Untitled Setup'}</h4>
+              <div class="flex items-center gap-xs">
+                <span class="text-xs font-mono text-profit mr-sm">${pb.winRate || 75}% Win Rate</span>
+                <button onclick="window.openPlaybookModal('${pb._id}')" class="btn-icon text-secondary" title="Edit"><i data-lucide="edit-3" style="width:14px;height:14px"></i></button>
+                <button onclick="window.deletePlaybook('${pb._id}')" class="btn-icon text-loss" title="Delete"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+              </div>
+            </div>
+            <p class="text-xs text-secondary mb-sm">${pb.timeframe || '15m / 1H'}</p>
+            <p class="text-xs text-secondary" style="line-height:1.5;">${pb.description || 'No description.'}</p>
           </div>
-          <p class="text-xs text-secondary mb-sm">Timeframes: 15m / 1H — Asset: FX & Gold</p>
-          <p class="text-xs text-secondary" style="line-height:1.5;">Wait for liquidity sweep above Asian Session high, then enter on 5m market structure break with 1:2.5 minimum R:R.</p>
-        </div>
+        `).join('') : `
+          <div style="background:#0D0F14; padding:40px; border-radius:8px; border:1px dashed var(--border); text-align:center; grid-column: span 2;">
+            <i data-lucide="book-open" class="text-secondary mb-sm" style="width:28px;height:28px;margin:0 auto;display:block;"></i>
+            <p class="text-xs text-secondary mb-sm">No playbooks created yet.</p>
+            <button onclick="window.openAddPlaybookModal()" class="btn btn-outline text-xs">Create Your First Playbook</button>
+          </div>
+        `}
       </div>
     </div>
   `),
@@ -1537,10 +1551,27 @@ const views = {
   },
 
   journal: () => BaseLayout("Daily Notes & Notebooks", "Structured trading journal thoughts and market observations.", `
-    <div class="glass-panel">
+    <div class="glass-panel mb-lg">
       <h3 class="font-heading font-bold text-sm mb-md">DAILY MARKET NOTEBOOK</h3>
-      <textarea class="input-field mb-md" rows="6" placeholder="Log pre-market thoughts, key levels, or emotional state..."></textarea>
-      <button onclick="showToast('Journal note saved!')" class="btn btn-primary text-xs">Save Note</button>
+      <textarea id="journal-note-input" class="input-field mb-md" rows="6" placeholder="Log pre-market thoughts, key levels, or emotional state..."></textarea>
+      <button onclick="window.saveJournalNote()" class="btn btn-primary text-xs">Save Note to Database</button>
+    </div>
+
+    <div class="glass-panel">
+      <h3 class="font-heading font-bold text-sm mb-md">SAVED NOTES</h3>
+      ${(state.notes && state.notes.length > 0) ? state.notes.map(n => `
+        <div style="background:#0D0F14; padding:16px; border-radius:8px; border:1px solid var(--border); margin-bottom:12px;">
+          <div class="flex justify-between items-center mb-xs">
+            <span class="text-xs text-secondary font-mono">${new Date(n.createdAt || n.updatedAt).toLocaleString()}</span>
+            <button onclick="window.deleteNote('${n._id}')" class="btn-icon text-loss" title="Delete Note"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+          </div>
+          <p class="text-sm text-main" style="line-height:1.6; white-space:pre-wrap;">${n.content || n.title || ''}</p>
+        </div>
+      `).join('') : `
+        <div style="padding:30px; text-align:center; color:var(--text-secondary);" class="text-xs">
+          No saved notes yet. Write something above and click "Save Note to Database".
+        </div>
+      `}
     </div>
   `),
 
@@ -1553,13 +1584,16 @@ const views = {
       
       <div class="grid grid-cols-1 gap-md">
         ${state.accounts && state.accounts.length > 0 ? state.accounts.map(acc => `
-          <div style="background:#0D0F14; padding:20px; border-radius:8px; border:1px solid var(--border);" class="font-mono">
+          <div style="background:#0D0F14; padding:20px; border-radius:8px; border:1px solid var(--border);" class="font-mono relative">
             <div class="flex justify-between items-center mb-xs">
               <span class="font-bold text-accent">${acc.name} (${acc.broker || 'Manual'})</span>
-              <span class="text-xs ${acc.status === 'ACTIVE' ? 'text-profit' : 'text-secondary'}">${acc.accountType} - ${acc.status}</span>
+              <div class="flex items-center gap-xs">
+                <span class="text-xs ${acc.status === 'ACTIVE' ? 'text-profit' : 'text-secondary'} mr-sm">${acc.accountType} - ${acc.status}</span>
+                <button onclick="window.deleteAccount('${acc._id}')" class="btn-icon text-loss" title="Delete Account"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+              </div>
             </div>
-            <div class="text-xl font-bold">$${acc.currentBalance.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
-            <div class="text-xs text-secondary mt-xs">Starting Balance: $${acc.startingBalance.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+            <div class="text-xl font-bold">$${acc.currentBalance ? acc.currentBalance.toLocaleString('en-US', {minimumFractionDigits:2}) : '0.00'}</div>
+            <div class="text-xs text-secondary mt-xs">Starting Balance: $${acc.startingBalance ? acc.startingBalance.toLocaleString('en-US', {minimumFractionDigits:2}) : '0.00'}</div>
           </div>
         `).join('') : `
           <div style="padding:40px; text-align:center; color:var(--text-secondary);" class="font-mono text-sm">
@@ -2048,10 +2082,209 @@ const deleteTrade = async (id) => {
   }
 };
 
-window.openAddTradeModal = () => openModal('trade-modal');
+/* ===== DATA FETCHING & CRUD HANDLERS ===== */
+const fetchAccounts = async () => {
+  try {
+    const res = await fetch('/api/accounts');
+    if (res.ok) {
+      const data = await res.json();
+      state.accounts = data.accounts || [];
+      if (state.accounts.length > 0 && !state.activeAccount) {
+        state.activeAccount = state.accounts[0];
+      }
+    }
+  } catch (err) {
+    console.error('Failed to fetch accounts', err);
+  }
+};
+
+window.deleteAccount = async (id) => {
+  if (!confirm('Are you sure you want to delete this trading account?')) return;
+  try {
+    const res = await fetch(`/api/accounts/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      state.accounts = (state.accounts || []).filter(a => a._id !== id);
+      if (state.activeAccount?._id === id) {
+        state.activeAccount = state.accounts[0] || null;
+      }
+      showToast('Account deleted successfully', 'success');
+      renderView('accounts');
+    } else {
+      showToast('Failed to delete account', 'error');
+    }
+  } catch (err) {
+    showToast('Delete account error', 'error');
+  }
+};
+
+const fetchPlaybooks = async () => {
+  try {
+    const res = await fetch('/api/playbooks');
+    if (res.ok) {
+      const data = await res.json();
+      state.playbooks = data.playbooks || [];
+    }
+  } catch (e) {
+    console.error('Failed to fetch playbooks', e);
+  }
+};
+
+window.openAddPlaybookModal = () => window.openPlaybookModal(null);
+window.openPlaybookModal = (playbookId) => {
+  if (playbookId) {
+    const pb = (state.playbooks || []).find(p => p._id === playbookId);
+    if (pb) {
+      if (document.getElementById('pb-id')) document.getElementById('pb-id').value = pb._id;
+      if (document.getElementById('pb-title')) document.getElementById('pb-title').value = pb.title || pb.name || '';
+      if (document.getElementById('pb-winrate')) document.getElementById('pb-winrate').value = pb.winRate || 75;
+      if (document.getElementById('pb-timeframe')) document.getElementById('pb-timeframe').value = pb.timeframe || '15m / 1H';
+      if (document.getElementById('pb-description')) document.getElementById('pb-description').value = pb.description || pb.rulesDescription || '';
+      if (document.getElementById('playbook-modal-title')) document.getElementById('playbook-modal-title').innerText = 'Edit Playbook Strategy';
+    }
+  } else {
+    if (document.getElementById('pb-id')) document.getElementById('pb-id').value = '';
+    if (document.getElementById('pb-title')) document.getElementById('pb-title').value = '';
+    if (document.getElementById('pb-winrate')) document.getElementById('pb-winrate').value = '75';
+    if (document.getElementById('pb-timeframe')) document.getElementById('pb-timeframe').value = '15m / 1H';
+    if (document.getElementById('pb-description')) document.getElementById('pb-description').value = '';
+    if (document.getElementById('playbook-modal-title')) document.getElementById('playbook-modal-title').innerText = 'Create New Playbook';
+  }
+  openModal('playbook-modal');
+};
+
+window.savePlaybook = async () => {
+  const id = document.getElementById('pb-id')?.value;
+  const title = document.getElementById('pb-title')?.value;
+  const winRate = Number(document.getElementById('pb-winrate')?.value || 75);
+  const timeframe = document.getElementById('pb-timeframe')?.value || '15m / 1H';
+  const description = document.getElementById('pb-description')?.value || '';
+
+  if (!title) { showToast('Please enter a playbook title', 'error'); return; }
+
+  const url = id ? `/api/playbooks/${id}` : '/api/playbooks';
+  const method = id ? 'PUT' : 'POST';
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, winRate, timeframe, description })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast(id ? 'Playbook updated!' : 'Playbook created!', 'success');
+      closeModal('playbook-modal');
+      await fetchPlaybooks();
+      renderView('strategies');
+    } else {
+      showToast(data.error || 'Failed to save playbook', 'error');
+    }
+  } catch (err) {
+    showToast('Error saving playbook', 'error');
+  }
+};
+
+window.deletePlaybook = async (id) => {
+  if (!confirm('Are you sure you want to delete this playbook?')) return;
+  try {
+    const res = await fetch(`/api/playbooks/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      state.playbooks = (state.playbooks || []).filter(p => p._id !== id);
+      showToast('Playbook deleted', 'success');
+      renderView('strategies');
+    } else {
+      showToast('Delete failed', 'error');
+    }
+  } catch (e) {
+    showToast('Error deleting playbook', 'error');
+  }
+};
+
+const fetchNotes = async () => {
+  try {
+    const res = await fetch('/api/notes');
+    if (res.ok) {
+      const data = await res.json();
+      state.notes = data.notes || [];
+    }
+  } catch (e) {
+    console.error('Failed to fetch notes', e);
+  }
+};
+
+window.saveJournalNote = async () => {
+  const content = document.getElementById('journal-note-input')?.value;
+  if (!content || !content.trim()) { showToast('Please enter a note before saving', 'error'); return; }
+
+  try {
+    const res = await fetch('/api/notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content.trim(), title: content.slice(0, 30) + '...' })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast('Journal note saved to MongoDB!', 'success');
+      await fetchNotes();
+      renderView('journal');
+    } else {
+      showToast(data.error || 'Failed to save note', 'error');
+    }
+  } catch (e) {
+    showToast('Error saving note', 'error');
+  }
+};
+
+window.deleteNote = async (id) => {
+  if (!confirm('Delete this journal note?')) return;
+  try {
+    const res = await fetch(`/api/notes/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      state.notes = (state.notes || []).filter(n => n._id !== id);
+      showToast('Note deleted');
+      renderView('journal');
+    } else {
+      showToast('Delete failed', 'error');
+    }
+  } catch (e) {
+    showToast('Error deleting note', 'error');
+  }
+};
+
+window.openAddTradeModal = () => {
+  if (document.getElementById('trade-id')) document.getElementById('trade-id').value = '';
+  if (document.getElementById('trade-symbol')) document.getElementById('trade-symbol').value = '';
+  if (document.getElementById('trade-entry')) document.getElementById('trade-entry').value = '';
+  if (document.getElementById('trade-exit')) document.getElementById('trade-exit').value = '';
+  if (document.getElementById('trade-size')) document.getElementById('trade-size').value = '';
+  if (document.getElementById('trade-sl')) document.getElementById('trade-sl').value = '';
+  if (document.getElementById('trade-tp')) document.getElementById('trade-tp').value = '';
+  if (document.getElementById('trade-notes')) document.getElementById('trade-notes').value = '';
+  if (document.getElementById('trade-modal-title')) document.getElementById('trade-modal-title').innerText = 'Log New Trade';
+  openModal('trade-modal');
+};
+
+window.openEditTradeModal = (id) => {
+  const trade = (state.trades || []).find(t => t._id === id);
+  if (!trade) return;
+  if (document.getElementById('trade-id')) document.getElementById('trade-id').value = trade._id;
+  if (document.getElementById('trade-symbol')) document.getElementById('trade-symbol').value = trade.symbol;
+  if (document.getElementById('trade-direction')) document.getElementById('trade-direction').value = trade.direction;
+  if (document.getElementById('trade-entry')) document.getElementById('trade-entry').value = trade.entryPrice;
+  if (document.getElementById('trade-exit')) document.getElementById('trade-exit').value = trade.exitPrice;
+  if (document.getElementById('trade-size')) document.getElementById('trade-size').value = trade.positionSize;
+  if (document.getElementById('trade-sl')) document.getElementById('trade-sl').value = trade.stopLoss || '';
+  if (document.getElementById('trade-tp')) document.getElementById('trade-tp').value = trade.takeProfit || '';
+  if (document.getElementById('trade-emotion')) document.getElementById('trade-emotion').value = trade.emotion || 'CALM';
+  if (document.getElementById('trade-tags')) document.getElementById('trade-tags').value = (trade.tags || []).join(', ');
+  if (document.getElementById('trade-notes')) document.getElementById('trade-notes').value = trade.notes || '';
+  if (document.getElementById('trade-modal-title')) document.getElementById('trade-modal-title').innerText = 'Edit Logged Trade';
+  openModal('trade-modal');
+};
 
 document.getElementById('trade-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
+  const tradeId = document.getElementById('trade-id')?.value;
   const tradeData = {
     symbol: document.getElementById('trade-symbol').value,
     direction: document.getElementById('trade-direction').value,
@@ -2065,20 +2298,23 @@ document.getElementById('trade-form')?.addEventListener('submit', async (e) => {
     tags: document.getElementById('trade-tags').value.split(',').map(t => t.trim()).filter(Boolean),
   };
 
+  const url = tradeId ? `/api/trades/${tradeId}` : '/api/trades';
+  const method = tradeId ? 'PUT' : 'POST';
+
   try {
-    const res = await fetch('/api/trades', {
-      method: 'POST',
+    const res = await fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(tradeData)
     });
     const data = await res.json();
     if (res.ok && data.success) {
-      showToast('Trade logged successfully!');
+      showToast(tradeId ? 'Trade updated successfully!' : 'Trade logged successfully!');
       closeModal('trade-modal');
       await fetchTrades();
       renderView(state.activeView);
     } else {
-      showToast(data.error || 'Failed to log trade', 'error');
+      showToast(data.error || 'Failed to save trade', 'error');
     }
   } catch (err) {
     showToast('Error saving trade', 'error');
@@ -2274,21 +2510,7 @@ const navigateTo = (viewName) => {
 };
 window.navigateTo = navigateTo;
 
-/* ===== FETCH ACCOUNTS ===== */
-const fetchAccounts = async () => {
-  try {
-    const res = await fetch('/api/accounts', {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('mega_journal_token')}` }
-    });
-    if (res.ok) {
-      const data = await res.json();
-      state.accounts = data.accounts || [];
-      if (state.accounts.length > 0 && !state.activeAccount) {
-        state.activeAccount = state.accounts.find(a => a.status === 'ACTIVE') || state.accounts[0];
-      }
-    }
-  } catch (err) { console.warn('Failed to fetch accounts'); }
-};
+/* ===== SWITCH ACCOUNT HELPER ===== */
 
 window.switchAccount = (idx) => {
   state.activeAccount = state.accounts[idx];
@@ -2453,7 +2675,7 @@ const init = async () => {
       const data = await res.json();
       state.user = data.user;
       state.moodHistory = state.user.moodHistory || [];
-      await Promise.all([fetchTrades(), fetchAccounts()]);
+      await Promise.all([fetchTrades(), fetchAccounts(), fetchPlaybooks(), fetchNotes()]);
       checkDrawdownAlert();
     }
   } catch (err) {
