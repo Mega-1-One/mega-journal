@@ -178,10 +178,10 @@ body {
   overflow-y: auto;
 }
 
-/* Topbar */
+/* Topbar Layout */
 .topbar {
-  height: 64px;
-  padding: 0 28px;
+  min-height: 64px;
+  padding: 12px 24px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -191,6 +191,232 @@ body {
   position: sticky;
   top: 0;
   z-index: 10;
+  gap: 16px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.mobile-menu-btn {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.user-avatar-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+}
+
+.avatar-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-glow);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+/* Landing Page Nav & Hero */
+.landing-nav {
+  min-height: 64px;
+  padding: 12px 36px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  gap: 16px;
+}
+
+.landing-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.landing-nav-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.landing-nav-links a:hover {
+  color: var(--text-main);
+}
+
+.landing-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero-title {
+  font-size: 56px;
+  line-height: 1.1;
+  letter-spacing: -1.5px;
+  max-width: 980px;
+  margin: 0 auto 24px;
+  color: var(--text-main);
+  word-break: break-word;
+}
+
+/* Sidebar Backdrop for Mobile Drawer */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 998;
+}
+
+/* Responsive adjustments — Tablet & Mobile */
+@media (max-width: 1024px) {
+  .app-container {
+    position: relative;
+  }
+  
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    z-index: 1000;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 25px rgba(0, 0, 0, 0.6);
+  }
+  .sidebar.sidebar-open {
+    left: 0;
+  }
+  
+  .mobile-menu-btn { 
+    display: flex !important; 
+  }
+  
+  .main-content { 
+    width: 100%; 
+    margin-left: 0; 
+  }
+  
+  .grid-cols-4 { grid-template-columns: repeat(2, 1fr) !important; }
+  .grid-cols-3 { grid-template-columns: repeat(2, 1fr) !important; }
+  .content-area { padding: 20px 16px; }
+}
+
+@media (max-width: 768px) {
+  .topbar { 
+    padding: 10px 14px; 
+    gap: 10px;
+  }
+
+  .topbar-subtitle {
+    display: none !important;
+  }
+
+  .topbar-title-area h1 {
+    font-size: 16px !important;
+  }
+
+  .btn-label-desktop {
+    display: none !important;
+  }
+  
+  .landing-nav {
+    padding: 10px 16px !important;
+  }
+  .landing-nav-links {
+    display: none !important;
+  }
+  .logo-sub {
+    display: none !important;
+  }
+
+  .hero-title {
+    font-size: 32px !important;
+    letter-spacing: -0.5px !important;
+    line-height: 1.15 !important;
+  }
+
+  .grid-cols-4 { grid-template-columns: 1fr !important; }
+  .grid-cols-3 { grid-template-columns: 1fr !important; }
+  .grid-cols-2 { grid-template-columns: 1fr !important; }
+  
+  .modal-box { 
+    width: 94% !important; 
+    max-width: 94% !important; 
+    margin: 16px auto !important; 
+    padding: 18px !important;
+  }
+  
+  .glass-panel { padding: 16px; }
+  
+  .table-wrapper { 
+    overflow-x: auto; 
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 16px;
+  }
+  
+  .data-table { min-width: 600px; }
+  
+  .text-xl { font-size: 18px; }
+  .text-2xl { font-size: 22px; }
+}
+
+@media (max-width: 480px) {
+  .username-label {
+    display: none !important;
+  }
+  
+  .hero-title {
+    font-size: 26px !important;
+  }
+
+  .topbar-left {
+    gap: 8px;
+  }
+
+  .topbar-right {
+    gap: 6px;
+  }
+
+  .text-xl { font-size: 16px !important; }
+  .text-2xl { font-size: 20px !important; }
+  .text-3xl { font-size: 24px !important; }
+  
+  .content-area {
+    padding: 12px 8px;
+  }
 }
 
 

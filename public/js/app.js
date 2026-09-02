@@ -348,29 +348,32 @@ const renderTopbar = (title, subtitle) => {
   const isLight = document.documentElement.getAttribute('data-theme') === 'light';
   return `
     <header class="topbar">
-      <button onclick="toggleSidebar()" class="btn-icon mobile-menu-btn" style="display:none;">
-        <i data-lucide="menu" style="width:20px;height:20px"></i>
-      </button>
-      <div>
-        <h1 class="text-xl font-bold font-heading">${title}</h1>
-        <p class="text-xs text-secondary mt-xs">${subtitle}</p>
+      <div class="topbar-left">
+        <button onclick="toggleSidebar()" class="mobile-menu-btn" aria-label="Toggle Menu">
+          <i data-lucide="menu" style="width:20px;height:20px"></i>
+        </button>
+        <div class="topbar-title-area">
+          <h1 class="text-xl font-bold font-heading" style="margin:0;">${title}</h1>
+          <p class="text-xs text-secondary mt-xs topbar-subtitle" style="margin:0;">${subtitle}</p>
+        </div>
       </div>
-      <div class="flex items-center gap-md">
-        <button onclick="toggleTheme()" class="btn btn-outline text-xs" style="padding: 6px 12px;" title="Switch Light/Dark Theme">
+
+      <div class="topbar-right">
+        <button onclick="toggleTheme()" class="btn btn-outline text-xs theme-toggle-btn" style="padding: 6px 12px;" title="Switch Light/Dark Theme">
           <i data-lucide="${isLight ? 'moon' : 'sun'}" style="width:14px;height:14px"></i>
-          <span>${isLight ? 'Dark' : 'Light'} Mode</span>
+          <span class="btn-label-desktop">${isLight ? 'Dark' : 'Light'} Mode</span>
         </button>
-        <button onclick="document.getElementById('command-palette').classList.remove('hidden')" class="btn btn-outline text-xs" style="padding: 6px 12px;">
-          <i data-lucide="search" style="width:14px;height:14px"></i> Search <span class="command-badge ml-xs">Ctrl+K</span>
+        <button onclick="document.getElementById('command-palette').classList.remove('hidden')" class="btn btn-outline text-xs search-btn" style="padding: 6px 12px;">
+          <i data-lucide="search" style="width:14px;height:14px"></i> <span class="btn-label-desktop">Search</span>
         </button>
-        <button onclick="openAddTradeModal()" class="btn btn-primary text-xs" style="padding: 8px 14px;">
-          <i data-lucide="plus" style="width:14px;height:14px"></i> Log Trade
+        <button onclick="openAddTradeModal()" class="btn btn-primary text-xs log-trade-btn" style="padding: 8px 14px;">
+          <i data-lucide="plus" style="width:14px;height:14px"></i> <span>Log Trade</span>
         </button>
-        <div class="flex items-center gap-sm pl-md" style="border-left: 1px solid var(--border)">
-          <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-glow);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;">
+        <div class="user-avatar-badge">
+          <div class="avatar-circle">
             ${(state.user?.username || 'T')[0].toUpperCase()}
           </div>
-          <span class="text-xs font-bold font-mono">@${state.user?.username || 'Trader'}</span>
+          <span class="text-xs font-bold font-mono username-label">@${state.user?.username || 'Trader'}</span>
         </div>
       </div>
     </header>
@@ -537,50 +540,48 @@ const views = {
     return `
     <div style="min-height: 100vh; background: var(--bg-dark); color: var(--text-main); font-family: var(--font-body); overflow-x: hidden;">
       <!-- Top Navigation Header -->
-      <nav style="height: 72px; padding: 0 40px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); backdrop-filter: blur(16px); position: sticky; top: 0; z-index: 100;">
+      <nav class="landing-nav">
         <div class="flex items-center gap-sm" style="cursor: pointer" onclick="navigateTo('landing')">
-          <div class="logo-icon"><span style="font-weight: 900; font-size: 15px;">MJ</span></div>
+          <div class="logo-icon"><span style="font-weight: 900; font-size: 14px;">MJ</span></div>
           <div>
-            <span class="font-heading font-bold" style="font-size: 17px; letter-spacing: -0.5px;">MEGA <span class="text-accent">JOURNAL</span></span>
-            <span style="display: block; font-size: 9px; color: var(--text-secondary); letter-spacing: 1.5px; font-weight: 600;">TRADING PERFORMANCE OS</span>
+            <span class="font-heading font-bold" style="font-size: 16px; letter-spacing: -0.5px;">MEGA <span class="text-accent">JOURNAL</span></span>
+            <span class="logo-sub" style="display: block; font-size: 9px; color: var(--text-secondary); letter-spacing: 1.5px; font-weight: 600;">TRADING OS</span>
           </div>
         </div>
-        <div class="flex items-center gap-xl text-xs font-semibold">
-          <a href="#features" style="color: var(--text-secondary); text-decoration: none;">Core Features</a>
-          <a href="#how-it-works" style="color: var(--text-secondary); text-decoration: none;">How It Works</a>
-          <a href="#specs" style="color: var(--text-secondary); text-decoration: none;">Quantitative Engine</a>
+        <div class="landing-nav-links">
+          <a href="#features">Core Features</a>
+          <a href="#how-it-works">How It Works</a>
+          <a href="#specs">Quantitative Engine</a>
         </div>
-        <div class="flex items-center gap-md">
-          <button onclick="toggleTheme()" class="btn btn-outline text-xs" style="padding: 6px 12px;" title="Switch Theme">
+        <div class="landing-nav-actions">
+          <button onclick="toggleTheme()" class="btn btn-outline text-xs" style="padding: 6px 10px;" title="Switch Theme">
             <i data-lucide="${isLight ? 'moon' : 'sun'}" style="width:14px;height:14px"></i>
-            <span>${isLight ? 'Dark' : 'Light'} Mode</span>
           </button>
           ${state.user ? `
-            <span class="text-xs font-mono font-bold text-accent">@${state.user.username || 'Trader'}</span>
             <button onclick="navigateTo('dashboard')" class="btn btn-primary text-xs">
-              <i data-lucide="layout-dashboard" style="width:14px;height:14px"></i> Open Dashboard
+              <i data-lucide="layout-dashboard" style="width:14px;height:14px"></i> Dashboard
             </button>
             <button onclick="handleLogout()" class="btn btn-outline text-xs" style="color: var(--loss);">Sign Out</button>
           ` : `
             <button onclick="setAuthMode('login'); navigateTo('auth');" class="btn btn-outline text-xs">Sign In</button>
             <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary text-xs">
-              Get Started Free →
+              Get Started →
             </button>
           `}
         </div>
       </nav>
 
       <!-- Hero Section -->
-      <section style="max-width: 1240px; margin: 0 auto; padding: 90px 24px 70px; text-align: center; position: relative;">
+      <section style="max-width: 1240px; margin: 0 auto; padding: 48px 16px 40px; text-align: center; position: relative;">
         <!-- Glowing Background Radial Blob -->
-        <div style="position: absolute; top: 10%; left: 50%; transform: translateX(-50%); width: 600px; height: 300px; background: radial-gradient(circle, var(--accent-glow) 0%, rgba(0,0,0,0) 70%); filter: blur(60px); pointer-events: none;"></div>
+        <div style="position: absolute; top: 10%; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; height: 300px; background: radial-gradient(circle, var(--accent-glow) 0%, rgba(0,0,0,0) 70%); filter: blur(60px); pointer-events: none;"></div>
 
-        <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 18px; background: var(--accent-glow); border: 1px solid var(--border-highlight); border-radius: 9999px; font-size: 11px; font-weight: 700; color: var(--accent); margin-bottom: 32px;" class="font-mono">
-          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--profit); display: inline-block;" class="animate-pulse"></span>
+        <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; background: var(--accent-glow); border: 1px solid var(--border-highlight); border-radius: 9999px; font-size: 10px; font-weight: 700; color: var(--accent); margin-bottom: 24px; max-width: 95%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" class="font-mono">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--profit); display: inline-block; flex-shrink: 0;" class="animate-pulse"></span>
           INSTITUTIONAL QUANT OS • REAL-TIME MONGODB ATLAS SYNC
         </div>
         
-        <h1 class="font-heading font-bold" style="font-size: 58px; line-height: 1.08; letter-spacing: -2px; max-width: 980px; margin: 0 auto 28px; color: var(--text-main);">
+        <h1 class="font-heading font-bold hero-title">
           Turn Raw Market Executions into an Unshakeable Mathematical Edge.
         </h1>
         
