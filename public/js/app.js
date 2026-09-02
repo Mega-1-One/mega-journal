@@ -1619,9 +1619,9 @@ const views = {
       <div class="glass-panel">
         <h3 class="font-heading font-bold text-sm mb-md">ACCOUNT PREFERENCES</h3>
         <div style="display:flex; flex-direction:column; gap:16px;">
-          <div><label class="input-label">FULL NAME</label><input type="text" class="input-field" value="${state.user?.name || 'Trader'}" readonly></div>
-          <div><label class="input-label">EMAIL ADDRESS</label><input type="text" class="input-field" value="${state.user?.email || 'trader@megajournal.com'}" readonly></div>
-          <div><label class="input-label">BASE CURRENCY</label><input type="text" class="input-field" value="USD ($)" readonly></div>
+          <div><label class="input-label">FULL NAME</label><input type="text" id="settings-name" class="input-field" value="${state.user?.name || state.user?.username || 'Trader'}"></div>
+          <div><label class="input-label">EMAIL ADDRESS</label><input type="text" id="settings-email" class="input-field" value="${state.user?.email || 'trader@megajournal.com'}"></div>
+          <div><label class="input-label">BASE CURRENCY</label><input type="text" id="settings-currency" class="input-field" value="${state.activeAccount?.currency || 'USD'}"></div>
         </div>
       </div>
       <div class="glass-panel">
@@ -1633,7 +1633,7 @@ const views = {
           </div>
           <div><label class="input-label">RISK PER TRADE (%)</label><input type="number" id="settings-risk" step="0.1" class="input-field" value="${state.activeAccount?.riskPerTrade || 1.0}" onchange="updateAccountField('riskPerTrade', this.value)"></div>
           <div><label class="input-label">MAX DAILY LOSS ($)</label><input type="number" id="settings-daily-loss" class="input-field" value="${state.activeAccount?.maxDailyLossLimit || 500}" onchange="updateAccountField('maxDailyLossLimit', this.value)"></div>
-          <button onclick="saveSettings()" class="btn btn-primary text-sm font-bold mt-sm" style="width:100%; padding: 12px 16px;">Save Changes</button>
+          <button onclick="window.saveSettings()" class="btn btn-primary text-sm font-bold mt-sm" style="width:100%; padding: 12px 16px;">Save Changes</button>
         </div>
       </div>
     </div>
@@ -1871,6 +1871,59 @@ const renderEquityChart = () => {
 };
 
 /* ===== SETTINGS HELPERS ===== */
+window.saveSettings = async () => {
+  const name = document.getElementById('settings-name')?.value;
+  const email = document.getElementById('settings-email')?.value;
+  const currency = document.getElementById('settings-currency')?.value || 'USD';
+  const balance = Number(document.getElementById('settings-balance')?.value || 10000);
+  const risk = Number(document.getElementById('settings-risk')?.value || 1.0);
+  const dailyLoss = Number(document.getElementById('settings-daily-loss')?.value || 500);
+
+  try {
+    showToast('Saving settings to MongoDB...');
+
+    // 1. Update user profile if name or email changed
+    if (state.user && (name !== state.user.name || email !== state.user.email)) {
+      const userRes = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email })
+      });
+      const userData = await userRes.json();
+      if (userData.success && userData.user) {
+        state.user = { ...state.user, ...userData.user };
+      }
+    }
+
+    // 2. Update active account parameters in MongoDB
+    if (state.activeAccount && state.activeAccount._id) {
+      const accRes = await fetch(`/api/accounts/${state.activeAccount._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currency,
+          startingBalance: balance,
+          currentBalance: balance + state.trades.reduce((a, t) => a + (t.netPnL || 0), 0),
+          riskPerTrade: risk,
+          maxDailyLossLimit: dailyLoss
+        })
+      });
+      const accData = await accRes.json();
+      if (accData.success && accData.account) {
+        state.activeAccount = accData.account;
+        const idx = (state.accounts || []).findIndex(a => a._id === accData.account._id);
+        if (idx !== -1) state.accounts[idx] = accData.account;
+      }
+    }
+
+    showToast('Settings saved successfully to MongoDB!', 'success');
+    renderView(state.activeView);
+  } catch (err) {
+    console.error('saveSettings error:', err);
+    showToast('Failed to save settings to MongoDB', 'error');
+  }
+};
+
 window.updateAccountBalance = async (val) => {
   if (!state.activeAccount) return;
   try {

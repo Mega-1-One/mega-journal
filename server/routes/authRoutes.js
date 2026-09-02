@@ -108,6 +108,26 @@ router.get('/me', authMiddleware, async (req, res) => {
   res.json({ success: true, user: req.user });
 });
 
+// PUT /api/auth/profile
+router.put('/profile', authMiddleware, async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
+    if (name) user.name = name;
+    if (email) user.email = email;
+    await user.save();
+
+    res.json({
+      success: true,
+      user: { id: user._id, email: user.email, username: user.username, name: user.name, role: user.role }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
