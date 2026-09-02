@@ -36,6 +36,8 @@ const state = {
   activeView: 'dashboard',
   isDemo: false,
   sidebarOpen: false,
+  adminStats: null,
+  adminUsers: [],
 };
 
 let equityChartInstance = null;
@@ -269,7 +271,7 @@ const renderSidebar = () => {
         ${g.title}
       </h3>
       <div class="nav-menu">
-        ${g.items.map(i => `
+        ${g.items.filter(i => i.id !== 'admin' || (state.user && state.user.role === 'ADMIN')).map(i => `
           <a href="#" class="nav-link ${state.activeView === i.id ? 'active' : ''}" onclick="navigateTo('${i.id}'); return false;">
             <i data-lucide="${i.icon}" style="width: 18px; height: 18px;"></i> ${i.name}
           </a>
@@ -1554,15 +1556,131 @@ const views = {
     </div>
   `),
 
-  admin: () => BaseLayout("Admin Portal", "System governance and security controls.", `
-    <div class="glass-panel">
-      <h3 class="font-heading font-bold text-sm mb-md">SYSTEM GOVERNANCE</h3>
-      <p class="text-secondary text-xs">MongoDB Atlas Cloud Connection Status: <span class="text-profit font-bold">CONNECTED</span></p>
-    </div>
-  `),
+  admin: () => {
+    if (!state.user || state.user.role !== 'ADMIN') {
+      return BaseLayout("Forbidden", "You do not have access.", 
+        `<div class="glass-panel text-center py-xl">
+           <i data-lucide="shield-alert" class="text-loss mb-md" style="width:40px;height:40px;margin:0 auto;display:block;"></i>
+           <h4 class="font-heading text-md font-bold mb-xs text-loss">Access Denied</h4>
+           <p class="text-secondary text-xs">You must be a system administrator to view this page.</p>
+        </div>`);
+    }
+
+    const { totalUsers = 0, realUsers = 0, demoUsers = 0, totalTrades = 0 } = state.adminStats || {};
+
+    return BaseLayout("System Admin Portal", "Global statistics, user governance, and SaaS dashboard.", `
+      <!-- Global Stats -->
+      <div class="grid grid-cols-4 gap-md mb-lg font-mono">
+        <div class="glass-panel">
+          <span class="text-xs text-secondary font-bold d-block mb-xs">TOTAL ACCOUNTS</span>
+          <div class="text-xl font-bold">${totalUsers}</div>
+        </div>
+        <div class="glass-panel text-accent" style="border-color: var(--accent);">
+          <span class="text-xs text-secondary font-bold d-block mb-xs">REAL REGISTERED USERS</span>
+          <div class="text-xl font-bold">${realUsers}</div>
+        </div>
+        <div class="glass-panel">
+          <span class="text-xs text-secondary font-bold d-block mb-xs">DEMO USERS</span>
+          <div class="text-xl font-bold text-secondary">${demoUsers}</div>
+        </div>
+        <div class="glass-panel text-profit" style="border-color: var(--profit);">
+          <span class="text-xs text-secondary font-bold d-block mb-xs">GLOBAL TRADES LOGGED</span>
+          <div class="text-xl font-bold">${totalTrades}</div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-sm mb-lg">
+        <button onclick="window.fetchAdminData()" class="btn btn-outline text-xs"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Refresh DB Stats</button>
+      </div>
+
+      <!-- User Management Table -->
+      <div class="glass-panel mb-lg">
+        <h3 class="font-heading text-sm font-bold mb-md">USER DIRECTORY & GOVERNANCE</h3>
+        
+        <div class="table-wrapper" style="box-shadow: none;">
+          <table class="data-table font-mono text-xs">
+            <thead>
+              <tr>
+                <th>REGISTRATION DATE</th>
+                <th>USERNAME / EMAIL</th>
+                <th>ROLE</th>
+                <th>STATUS</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.adminUsers && state.adminUsers.length > 0 ? state.adminUsers.map(u => `
+                <tr>
+                  <td class="text-secondary">${new Date(u.createdAt).toLocaleString()}</td>
+                  <td>
+                    <div class="font-bold \${u.isDemoUser ? 'text-secondary' : 'text-main'}">${u.username} ${u.isDemoUser ? '(Demo)' : ''}</div>
+                    <div class="text-xs text-secondary">${u.email}</div>
+                  </td>
+                  <td>
+                    <span style="display:inline-block; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:bold; background:\${u.role === 'ADMIN' ? 'var(--accent-glow)' : 'rgba(255,255,255,0.05)'}; color:\${u.role === 'ADMIN' ? 'var(--accent)' : 'var(--text-secondary)'};">
+                      ${u.role}
+                    </span>
+                  </td>
+                  <td><span class="text-profit">ACTIVE</span></td>
+                  <td>
+                    <div class="flex gap-sm">
+                      <button onclick="window.deleteUser('${u._id}')" class="btn-icon text-loss" title="Delete & Purge Data">
+                        <i data-lucide="trash-2" style="width:14px;height:14px"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `).join('') : `<tr><td colspan="5" class="text-center text-secondary py-md">Loading users or no users found. Click refresh.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `);
+  },
 };
 
 /* ===== STATE ROUTER & API ENGINE ===== */
+
+window.fetchAdminData = async () => {
+  if (!state.user || state.user.role !== 'ADMIN') return;
+  try {
+    const token = localStorage.getItem('mega_journal_token');
+    const [statsRes, usersRes] = await Promise.all([
+      fetch('/api/admin/stats', { headers: { 'Authorization': 'Bearer ' + token } }),
+      fetch('/api/admin/users', { headers: { 'Authorization': 'Bearer ' + token } })
+    ]);
+    const stats = await statsRes.json();
+    const users = await usersRes.json();
+    
+    if (stats.success) state.adminStats = stats.data;
+    if (users.success) state.adminUsers = users.data;
+    
+    if (state.activeView === 'admin') renderView('admin');
+  } catch (err) {
+    showToast('Failed to sync admin data', 'error');
+  }
+};
+
+window.deleteUser = async (userId) => {
+  if (!confirm('Are you absolutely sure? This will delete the user and ALL their trade history permanently.')) return;
+  try {
+    const token = localStorage.getItem('mega_journal_token');
+    const res = await fetch(\`/api/admin/users/\${userId}\`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast('User permanently deleted', 'success');
+      window.fetchAdminData();
+    } else {
+      showToast(data.error || 'Failed to delete user', 'error');
+    }
+  } catch(err) {
+    showToast('Error deleting user', 'error');
+  }
+};
 
 const renderView = (viewName) => {
   const root = document.getElementById('app-root');
@@ -1581,12 +1699,18 @@ const renderView = (viewName) => {
   }
 };
 
-window.navigateTo = (view) => {
+window.navigateTo = async (view) => {
   if (view !== 'auth' && view !== 'landing' && !state.user) {
     showToast('Please sign in first', 'error');
     state.activeView = 'landing';
     return renderView('landing');
   }
+  
+  if (view === 'admin') {
+    // Optionally show a loading toast if it takes a second
+    await window.fetchAdminData();
+  }
+  
   state.activeView = view;
   renderView(view);
 };

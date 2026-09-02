@@ -41,6 +41,7 @@ app.use('/api', require('./routes/goalRoutes')); // goals, risk
 app.use('/api/plans', require('./routes/planRoutes'));
 app.use('/api/brokers', require('./routes/brokerRoutes'));
 app.use('/api/ai-analyst', require('./routes/aiRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api', require('./routes/settingsRoutes')); // settings, onboarding, admin
 
 // Global Error Handler
