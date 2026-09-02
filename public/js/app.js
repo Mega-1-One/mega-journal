@@ -937,18 +937,20 @@ const views = {
       })() : ''}
 
       <!-- Monthly Institutional Calendar Heatmap -->
-      ${totalTrades > 0 ? (() => { // Redesigned Calendar
+      ${(() => { // Redesigned Calendar always renders
         const now = new Date();
         const year = now.getFullYear(); const month = now.getMonth();
         const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
         
         let tradesByDateGlobal = {};
-        state.trades.forEach(t => {
-          const d = new Date(t.entryDate);
-          const key = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
-          if (!tradesByDateGlobal[key]) tradesByDateGlobal[key] = [];
-          tradesByDateGlobal[key].push(t);
-        });
+        if (state.trades && state.trades.length > 0) {
+          state.trades.forEach(t => {
+            const d = new Date(t.entryDate);
+            const key = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+            if (!tradesByDateGlobal[key]) tradesByDateGlobal[key] = [];
+            tradesByDateGlobal[key].push(t);
+          });
+        }
 
         const monthStart = new Date(year, month, 1);
         const startDate = new Date(monthStart);
@@ -981,7 +983,7 @@ const views = {
               const compliance = (t.emotion || 'calm').toLowerCase() === 'fomo' ? 'NO' : 'YES';
               
               return '<div style="background:'+cardBg+'; border-radius:6px; padding:8px; margin-bottom:8px; display:flex; flex-direction:column; gap:4px; font-family:sans-serif; text-align:left;">' +
-                '<div style="font-weight:700; font-size:13px; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + t.symbol + '</div>' +
+                '<div style="font-weight:700; font-size:13px; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + (t.symbol || 'TRADE') + '</div>' +
                 '<div><span style="display:inline-block; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:700; background:'+yesBadgeBg+'; color:rgba(255,255,255,0.9);">' + compliance + '</span></div>' +
                 '<div style="font-size:12px; color:rgba(255,255,255,0.85); margin-top:2px;">' + rr + '</div>' +
                 '<div style="font-size:12px; color:rgba(255,255,255,0.85);">' + pct + '%</div>' +
@@ -1018,7 +1020,7 @@ const views = {
             gridCells +
           '</div>' +
         '</div>';
-      })() : ''}
+      })()}
     `);
   },
 
