@@ -1614,11 +1614,11 @@ const views = {
                 <tr>
                   <td class="text-secondary">${new Date(u.createdAt).toLocaleString()}</td>
                   <td>
-                    <div class="font-bold \${u.isDemoUser ? 'text-secondary' : 'text-main'}">${u.username} ${u.isDemoUser ? '(Demo)' : ''}</div>
+                    <div class="font-bold ${u.isDemoUser ? 'text-secondary' : 'text-main'}">${u.username} ${u.isDemoUser ? '(Demo)' : ''}</div>
                     <div class="text-xs text-secondary">${u.email}</div>
                   </td>
                   <td>
-                    <span style="display:inline-block; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:bold; background:\${u.role === 'ADMIN' ? 'var(--accent-glow)' : 'rgba(255,255,255,0.05)'}; color:\${u.role === 'ADMIN' ? 'var(--accent)' : 'var(--text-secondary)'};">
+                    <span style="display:inline-block; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:bold; background:${u.role === 'ADMIN' ? 'var(--accent-glow)' : 'rgba(255,255,255,0.05)'}; color:${u.role === 'ADMIN' ? 'var(--accent)' : 'var(--text-secondary)'};">
                       ${u.role}
                     </span>
                   </td>
@@ -1666,7 +1666,7 @@ window.deleteUser = async (userId) => {
   if (!confirm('Are you absolutely sure? This will delete the user and ALL their trade history permanently.')) return;
   try {
     const token = localStorage.getItem('mega_journal_token');
-    const res = await fetch(\`/api/admin/users/\${userId}\`, {
+    const res = await fetch(`/api/admin/users/${userId}`, {
       method: 'DELETE',
       headers: { 'Authorization': 'Bearer ' + token }
     });
