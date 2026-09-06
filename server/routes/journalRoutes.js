@@ -20,11 +20,13 @@ router.post('/journal', async (req, res) => {
 
 router.put('/journal/:id', async (req, res) => {
   const entry = await JournalEntry.findOneAndUpdate({ _id: req.params.id, userId: req.user._id }, { $set: req.body }, { new: true });
+  if (!entry) return res.status(404).json({ success: false, error: 'Journal entry not found' });
   res.json({ success: true, entry });
 });
 
 router.delete('/journal/:id', async (req, res) => {
-  await JournalEntry.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+  const entry = await JournalEntry.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+  if (!entry) return res.status(404).json({ success: false, error: 'Journal entry not found' });
   res.json({ success: true });
 });
 
@@ -41,11 +43,13 @@ router.post('/notes', async (req, res) => {
 
 router.put('/notes/:id', async (req, res) => {
   const note = await Note.findOneAndUpdate({ _id: req.params.id, userId: req.user._id }, { $set: req.body }, { new: true });
+  if (!note) return res.status(404).json({ success: false, error: 'Note not found' });
   res.json({ success: true, note });
 });
 
 router.delete('/notes/:id', async (req, res) => {
-  await Note.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+  const note = await Note.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+  if (!note) return res.status(404).json({ success: false, error: 'Note not found' });
   res.json({ success: true });
 });
 
@@ -58,6 +62,18 @@ router.get('/books', async (req, res) => {
 router.post('/books', async (req, res) => {
   const book = await TradingBook.create({ userId: req.user._id, ...req.body });
   res.json({ success: true, book });
+});
+
+router.put('/books/:id', async (req, res) => {
+  const book = await TradingBook.findOneAndUpdate({ _id: req.params.id, userId: req.user._id }, { $set: req.body }, { new: true });
+  if (!book) return res.status(404).json({ success: false, error: 'Trading book not found' });
+  res.json({ success: true, book });
+});
+
+router.delete('/books/:id', async (req, res) => {
+  const book = await TradingBook.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+  if (!book) return res.status(404).json({ success: false, error: 'Trading book not found' });
+  res.json({ success: true });
 });
 
 module.exports = router;

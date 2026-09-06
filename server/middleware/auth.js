@@ -26,6 +26,7 @@ const authMiddleware = async (req, res, next) => {
           passwordHash,
           name: 'Demo Trader',
           isDemoUser: true,
+          planTier: 'ELITE'
         });
       }
       req.user = demoUser;
@@ -58,4 +59,24 @@ const adminMiddleware = (req, res, next) => {
   next();
 };
 
-module.exports = { authMiddleware, adminMiddleware, JWT_SECRET };
+const requireTier = (minTier) => {
+  const tiers = ['FREE', 'PRO', 'ELITE'];
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+    const userTier = req.user.planTier || 'FREE';
+    const userTierIdx = tiers.indexOf(userTier);
+    const minTierIdx = tiers.indexOf(minTier);
+
+    if (userTierIdx < minTierIdx && req.user.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        error: `Tier Restricted: ${minTier} tier or higher required. Current tier: ${userTier}.`
+      });
+    }
+    next();
+  };
+};
+
+module.exports = { authMiddleware, adminMiddleware, requireTier, JWT_SECRET };

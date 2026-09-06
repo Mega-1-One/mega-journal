@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Trade = require('../models/Trade');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, requireTier } = require('../middleware/auth');
 
 router.use(authMiddleware);
 
@@ -15,7 +15,7 @@ router.post('/analyze', async (req, res) => {
     if (trades.length === 0) {
       return res.json({
         success: true,
-        analysis: "Welcome to AI Analyst 2.0! You haven't logged any trades yet. Start logging your setups to receive personalized edge feedback, risk warnings, and performance breakdowns.",
+        analysis: "### 🧠 AI Analyst 2.0 — Account Ready\n\n* **Sample Size:** 0 closed trades recorded\n* **Current Win Rate:** 0.0%\n* **Net Realized P&L:** $0.00\n\nWelcome to AI Analyst 2.0! No closed trades were found in your database. Log your real executions to generate personalized expectancy analysis, risk leak warnings, and process blueprints.",
         timestamp: new Date()
       });
     }
@@ -26,9 +26,9 @@ router.post('/analyze', async (req, res) => {
     const winRate = Math.round((wins / trades.length) * 100);
 
     const prompt = `You are MEGA JOURNAL AI Analyst 2.0, a world-class trading performance coach.
-Analyze the following user trade execution metrics and provide concise, high-value, actionable performance feedback in markdown format.
+Analyze the following authenticated user trade execution metrics from the database and provide concise, high-value, actionable performance feedback in markdown format.
 
-Trader Performance Metrics:
+Trader Database Metrics:
 - Total Trades Sampled: ${trades.length}
 - Wins: ${wins}, Losses: ${losses}
 - Current Win Rate: ${winRate}%
@@ -68,13 +68,13 @@ Format your response cleanly with markdown sections:
       }
     }
 
-    // Fallback if Gemini key is loading or rate-limited
+    // Fallback based strictly on authenticated user's actual database trades
     const fallbackText = `### 🧠 AI Analyst Performance Summary\n\n` +
-      `* **Sample Size analyzed:** ${trades.length} recent trades\n` +
+      `* **Sample Size analyzed:** ${trades.length} recent trades from your database\n` +
       `* **Current Win Rate:** ${winRate}%\n` +
       `* **Net Realized P&L:** $${totalPnL.toFixed(2)}\n\n` +
       `#### 🔍 Execution Edge Insights:\n` +
-      `1. **Execution Edge:** High win rate identified across London & New York session breakouts.\n` +
+      `1. **Execution Edge:** Expectancy generated across ${wins} winning trades out of ${trades.length} executions.\n` +
       `2. **Risk Leak Alert:** Maintain disciplined Stop Loss placements without premature manual exits.\n` +
       `3. **Actionable Advice:** Keep Risk-to-Reward ratio above 1:2.0 to compound expectancy.`;
 

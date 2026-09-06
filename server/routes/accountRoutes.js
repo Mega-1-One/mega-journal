@@ -15,9 +15,19 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/accounts
+// POST /api/accounts - Create account with tier entitlement check
 router.post('/', async (req, res) => {
   try {
+    const existingAccounts = await Account.countDocuments({ userId: req.user._id });
+    const userTier = req.user.planTier || 'FREE';
+
+    if (userTier === 'FREE' && existingAccounts >= 1 && req.user.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        error: 'Free Tier Limit Reached: Free plan includes 1 trading account. Upgrade to Pro or Elite for multi-account portfolio management.'
+      });
+    }
+
     const account = await Account.create({
       userId: req.user._id,
       ...req.body

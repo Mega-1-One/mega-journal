@@ -582,11 +582,11 @@ const views = {
         </div>
         
         <h1 class="font-heading font-bold hero-title">
-          Turn Raw Market Executions into an Unshakeable Mathematical Edge.
+          Turn Every Trade Into an Edge. Expose Your Leaks.
         </h1>
         
         <p class="text-secondary" style="font-size: 18px; max-width: 800px; margin: 0 auto 44px; line-height: 1.6;">
-          Built for disciplined retail & prop firm traders who operate like hedge funds. Track real executions, audit behavioral leaks, run What-If simulations, and enforce strict drawdown compliance.
+          MEGA JOURNAL exposes your performance leaks, measures your edge, and tells you what to change. Evaluate risk & process before adjusting position sizing with automated drawdown tracking, playbook rule adherence, and evidence-grounded AI analytics.
         </p>
 
         <div class="flex-center gap-md" style="margin-bottom: 64px;">
@@ -609,7 +609,7 @@ const views = {
           <div class="flex justify-between items-center mb-lg pb-md" style="border-bottom: 1px solid var(--border);">
             <div class="flex items-center gap-md">
               <span style="width:10px;height:10px;border-radius:50%;background:var(--profit);display:inline-block;"></span>
-              <span class="font-mono text-xs text-secondary font-bold uppercase tracking-wider">LIVE DASHBOARD PROOF — REAL DATA ENGINE</span>
+              <span class="font-mono text-xs text-secondary font-bold uppercase tracking-wider">[DEMO DATA PREVIEW — SAMPLE ILLUS TRATION]</span>
             </div>
             <div class="flex items-center gap-sm">
               <span class="badge-pill badge-profit">100% COMPLIANT</span>

@@ -45,7 +45,7 @@ router.get('/export', async (req, res) => {
   }
 });
 
-// POST /api/trades/import - Batch CSV/JSON Import (MUST be before /:id route)
+// POST /api/trades/import - Batch CSV/JSON Import with Deduplication & Tier Check
 router.post('/import', async (req, res) => {
   try {
     const { trades: importList } = req.body;
@@ -53,27 +53,68 @@ router.post('/import', async (req, res) => {
       return res.status(400).json({ success: false, error: 'No trades provided in import list' });
     }
 
+    // Check Free tier trade cap (50 trades max)
+    const existingTradeCount = await Trade.countDocuments({ userId: req.user._id });
+    const userTier = req.user.planTier || 'FREE';
+    if (userTier === 'FREE' && (existingTradeCount + importList.length > 50) && req.user.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        error: `Free Tier Limit Exceeded: Max 50 trades allowed on Free plan. Current count: ${existingTradeCount}. Please upgrade to Pro for unlimited trades.`
+      });
+    }
+
     const createdTrades = [];
+    let skippedDuplicates = 0;
+
     for (const item of importList) {
-      const pnl = item.netPnL !== undefined ? parseFloat(item.netPnL) : (item.direction === 'Long' ? (item.exitPrice - item.entryPrice) * item.positionSize : (item.entryPrice - item.exitPrice) * item.positionSize);
+      const entryDate = item.entryDate ? new Date(item.entryDate) : new Date();
+      const entryPrice = parseFloat(item.entryPrice || 1.0);
+      const exitPrice = parseFloat(item.exitPrice || 1.0);
+      const positionSize = parseFloat(item.positionSize || 1);
+      const symbol = (item.symbol || 'EURUSD').toUpperCase();
+
+      // Deduplication check: match exact trade parameters for user
+      const existing = await Trade.findOne({
+        userId: req.user._id,
+        symbol,
+        entryPrice,
+        exitPrice,
+        positionSize,
+        entryDate
+      });
+
+      if (existing) {
+        skippedDuplicates++;
+        continue;
+      }
+
+      const pnl = item.netPnL !== undefined
+        ? parseFloat(item.netPnL)
+        : (item.direction === 'Long' ? (exitPrice - entryPrice) * positionSize : (entryPrice - exitPrice) * positionSize);
+
       const t = await Trade.create({
         userId: req.user._id,
-        symbol: item.symbol || 'EURUSD',
+        symbol,
         assetClass: item.assetClass || 'Forex',
         direction: item.direction || 'Long',
-        entryPrice: parseFloat(item.entryPrice || 1.0),
-        exitPrice: parseFloat(item.exitPrice || 1.0),
-        positionSize: parseFloat(item.positionSize || 1),
+        entryPrice,
+        exitPrice,
+        positionSize,
         netPnL: parseFloat(pnl.toFixed(2)),
         winLoss: pnl > 0 ? 'WIN' : (pnl < 0 ? 'LOSS' : 'BREAKEVEN'),
-        entryDate: item.entryDate ? new Date(item.entryDate) : new Date(),
+        entryDate,
         exitDate: item.exitDate ? new Date(item.exitDate) : new Date(),
         notes: item.notes || 'Imported via CSV/JSON',
       });
       createdTrades.push(t);
     }
 
-    res.json({ success: true, importedCount: createdTrades.length, trades: createdTrades });
+    res.json({
+      success: true,
+      importedCount: createdTrades.length,
+      skippedDuplicates,
+      trades: createdTrades
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -91,9 +132,19 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/trades - Create trade
+// POST /api/trades - Create trade with tier enforcement & account balance update
 router.post('/', async (req, res) => {
   try {
+    // Check Free Tier trade limit (50 trades)
+    const existingTradeCount = await Trade.countDocuments({ userId: req.user._id });
+    const userTier = req.user.planTier || 'FREE';
+    if (userTier === 'FREE' && existingTradeCount >= 50 && req.user.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        error: 'Free Tier Limit Reached: Max 50 trades allowed on Free plan. Upgrade to Pro for unlimited trades.'
+      });
+    }
+
     const { symbol, assetClass, direction, entryPrice, exitPrice, stopLoss, takeProfit, positionSize, netPnL, entryDate, exitDate, emotion, notes, tags } = req.body;
 
     let pnl = netPnL;
@@ -107,9 +158,9 @@ router.post('/', async (req, res) => {
 
     const winLoss = pnl > 0 ? 'WIN' : (pnl < 0 ? 'LOSS' : 'BREAKEVEN');
     let rrRatio = 0;
-    if (stopLoss && entryPrice && stopLoss !== entryPrice) {
-      const risk = Math.abs(entryPrice - stopLoss);
-      const reward = Math.abs((exitPrice || entryPrice) - entryPrice);
+    if (stopLoss && entryPrice && parseFloat(stopLoss) !== parseFloat(entryPrice)) {
+      const risk = Math.abs(parseFloat(entryPrice) - parseFloat(stopLoss));
+      const reward = Math.abs((parseFloat(exitPrice) || parseFloat(entryPrice)) - parseFloat(entryPrice));
       rrRatio = parseFloat((reward / risk).toFixed(2));
     }
 
@@ -133,7 +184,7 @@ router.post('/', async (req, res) => {
       tags: tags || [],
     });
 
-    // Update account balance
+    // Update active account balance
     const account = await Account.findOne({ userId: req.user._id, status: 'ACTIVE' });
     if (account && typeof account.currentBalance === 'number') {
       account.currentBalance = Number(account.currentBalance) + Number(trade.netPnL);
@@ -152,14 +203,18 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /api/trades/:id - Update trade
+// PUT /api/trades/:id - Update trade with P&L and account balance sync
 router.put('/:id', async (req, res) => {
   try {
+    const existingTrade = await Trade.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!existingTrade) return res.status(404).json({ success: false, error: 'Trade not found' });
+
+    const oldPnL = existingTrade.netPnL || 0;
     const updateData = { ...req.body };
 
     // Recalculate P&L if price fields are present
     if (updateData.entryPrice !== undefined && updateData.exitPrice !== undefined && updateData.positionSize !== undefined) {
-      const dir = updateData.direction || 'Long';
+      const dir = updateData.direction || existingTrade.direction;
       let pnl;
       if (dir === 'Long') {
         pnl = (parseFloat(updateData.exitPrice) - parseFloat(updateData.entryPrice)) * parseFloat(updateData.positionSize);
@@ -181,19 +236,38 @@ router.put('/:id', async (req, res) => {
       { $set: updateData },
       { new: true }
     );
-    if (!trade) return res.status(404).json({ success: false, error: 'Trade not found' });
+
+    // Sync account balance with P&L delta
+    const newPnL = trade.netPnL || 0;
+    const pnlDelta = newPnL - oldPnL;
+    if (pnlDelta !== 0) {
+      const account = await Account.findOne({ userId: req.user._id, status: 'ACTIVE' });
+      if (account && typeof account.currentBalance === 'number') {
+        account.currentBalance = Number(account.currentBalance) + pnlDelta;
+        await account.save();
+      }
+    }
+
     res.json({ success: true, trade });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
 });
 
-// DELETE /api/trades/:id - Archive or delete trade
+// DELETE /api/trades/:id - Archive or delete trade with account balance sync
 router.delete('/:id', async (req, res) => {
   try {
     const trade = await Trade.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
     if (!trade) return res.status(404).json({ success: false, error: 'Trade not found' });
     await Execution.deleteMany({ tradeId: trade._id });
+
+    // Revert deleted trade P&L from active account balance
+    const account = await Account.findOne({ userId: req.user._id, status: 'ACTIVE' });
+    if (account && typeof account.currentBalance === 'number') {
+      account.currentBalance = Number(account.currentBalance) - Number(trade.netPnL || 0);
+      await account.save();
+    }
+
     res.json({ success: true, message: 'Trade deleted' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

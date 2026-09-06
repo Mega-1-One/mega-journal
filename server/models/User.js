@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
   name: { type: String, default: '' },
   avatar: { type: String, default: '' },
   role: { type: String, enum: ['TRADER', 'ADMIN'], default: 'TRADER' },
+  planTier: { type: String, enum: ['FREE', 'PRO', 'ELITE'], default: 'FREE' },
   isDemoUser: { type: Boolean, default: false },
   googleId: { type: String, default: null },
   resetPasswordToken: { type: String, default: null },

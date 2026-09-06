@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const BacktestSession = require('../models/BacktestSession');
 const BacktestTrade = require('../models/BacktestTrade');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, requireTier } = require('../middleware/auth');
 
 router.use(authMiddleware);
 
@@ -11,7 +11,7 @@ router.get('/sessions', async (req, res) => {
   res.json({ success: true, sessions });
 });
 
-router.post('/sessions', async (req, res) => {
+router.post('/sessions', requireTier('PRO'), async (req, res) => {
   const session = await BacktestSession.create({ userId: req.user._id, ...req.body });
   res.json({ success: true, session });
 });
@@ -21,7 +21,10 @@ router.get('/sessions/:id/trades', async (req, res) => {
   res.json({ success: true, trades });
 });
 
-router.post('/sessions/:id/trades', async (req, res) => {
+router.post('/sessions/:id/trades', requireTier('PRO'), async (req, res) => {
+  const session = await BacktestSession.findOne({ _id: req.params.id, userId: req.user._id });
+  if (!session) return res.status(404).json({ success: false, error: 'Backtest session not found' });
+
   const trade = await BacktestTrade.create({ userId: req.user._id, sessionId: req.params.id, ...req.body });
   res.json({ success: true, trade });
 });
