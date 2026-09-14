@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Mega Journal Dark Theme Tokens */
+  --bg-main: #00030A;
+  --bg-surface: #000B1A;
+  --bg-card: #00132C;
+  --bg-nested: #001A3A;
+  --border-subtle: #002B5B;
+  --text-primary: #FFFFFF;
+  --text-secondary: #7393B3;
+  --text-muted: #4A6B8A;
+  --accent-lime: #00D2FF;
+  --brand-glow: #0052CC;
+  --brand-cyan: #00D2FF;
+}
+
+.light {
+  /* Light Fallback Tokens */
+  --bg-main: #F7F8F6;
+  --bg-surface: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-nested: #F0F2EF;
+  --border-subtle: #E4E7E5;
+  --text-primary: #111315;
+  --text-secondary: #667078;
+  --text-muted: #959E98;
+  --accent-lime: #0099CC;
+  --brand-glow: #0052CC;
+  --brand-cyan: #0099CC;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: var(--font-ibm-plex), sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom Glass Cards */
+.custom-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 200ms ease,
+              box-shadow 200ms ease;
+}
+
+.custom-card:hover {
+  border-color: rgba(0, 210, 255, 0.40);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 82, 204, 0.25);
+}
+
+/* Mega Journal Primary CTA Button (#00D2FF Cyan Accent) */
+.btn-cyan-accent {
+  background-color: #00D2FF;
+  color: #00030A;
+  font-weight: 800;
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.btn-cyan-accent:hover {
+  background-color: #33DCFF;
+  transform: translateY(-1px);
+  box-shadow: 0 0 25px rgba(0, 210, 255, 0.45);
+}
+
+.btn-cyan-accent:active {
+  transform: translateY(0);
+}
+
+/* Legacy Lime Button compatibility */
+.btn-primary-lime {
+  background-color: #00D2FF;
+  color: #00030A;
+  font-weight: 800;
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.btn-primary-lime:hover {
+  background-color: #33DCFF;
+  transform: translateY(-1px);
+  box-shadow: 0 0 25px rgba(0, 210, 255, 0.45);
+}
+
+/* Tabular Numbers */
+.font-mono-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle Glass Panel */
+.glass-panel {
+  background: rgba(0, 19, 44, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 82, 204, 0.3);
+}
+
+/* Gradient Text Accent */
+.text-gradient-cyan {
+  background: linear-gradient(135deg, #FFFFFF 30%, #00D2FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Subtle Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #00030A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #001A3A;
+  border-radius: 4px;
+  border: 1px solid #002B5B;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0052CC;
+}

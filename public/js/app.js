@@ -538,21 +538,30 @@ const views = {
   landing: () => {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
     return `
-    <div style="min-height: 100vh; background: var(--bg-dark); color: var(--text-main); font-family: var(--font-body); overflow-x: hidden;">
-      <!-- Top Navigation Header -->
+    <div style="min-height: 100vh; background: var(--bg-dark); color: var(--text-main); font-family: var(--font-body); overflow-x: hidden; position: relative;">
+      
+      <!-- Subtle Cursor Glow Container -->
+      <div id="cursor-glow"></div>
+
+      <!-- Sticky Top Navigation Header -->
       <nav class="landing-nav">
         <div class="flex items-center gap-sm" style="cursor: pointer" onclick="navigateTo('landing')">
-          <div class="logo-icon"><span style="font-weight: 900; font-size: 14px;">MJ</span></div>
+          <div class="logo-icon"><span style="font-weight: 900; font-size: 15px;">MJ</span></div>
           <div>
-            <span class="font-heading font-bold" style="font-size: 16px; letter-spacing: -0.5px;">MEGA <span class="text-accent">JOURNAL</span></span>
-            <span class="logo-sub" style="display: block; font-size: 9px; color: var(--text-secondary); letter-spacing: 1.5px; font-weight: 600;">TRADING OS</span>
+            <span class="font-heading font-bold" style="font-size: 17px; letter-spacing: -0.5px;">MEGA <span class="text-accent">JOURNAL</span></span>
+            <span class="logo-sub" style="display: block; font-size: 9px; color: var(--text-secondary); letter-spacing: 1.5px; font-weight: 600;">THE TRADING PERFORMANCE JOURNAL</span>
           </div>
         </div>
+
         <div class="landing-nav-links">
-          <a href="#features">Core Features</a>
-          <a href="#how-it-works">How It Works</a>
-          <a href="#specs">Quantitative Engine</a>
+          <a href="#product">Product</a>
+          <a href="#features">Features</a>
+          <a href="#analytics">Analytics</a>
+          <a href="#ai-analyst">AI Analyst</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#how-it-works">Resources</a>
         </div>
+
         <div class="landing-nav-actions">
           <button onclick="toggleTheme()" class="btn btn-outline text-xs" style="padding: 6px 10px;" title="Switch Theme">
             <i data-lucide="${isLight ? 'moon' : 'sun'}" style="width:14px;height:14px"></i>
@@ -563,198 +572,631 @@ const views = {
             </button>
             <button onclick="handleLogout()" class="btn btn-outline text-xs" style="color: var(--loss);">Sign Out</button>
           ` : `
-            <button onclick="setAuthMode('login'); navigateTo('auth');" class="btn btn-outline text-xs">Sign In</button>
+            <button onclick="setAuthMode('login'); navigateTo('auth');" class="btn btn-outline text-xs">Log in</button>
             <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary text-xs">
               Get Started →
             </button>
           `}
+          <button onclick="toggleMobileNav()" class="mobile-nav-toggle" title="Toggle Menu">
+            <i data-lucide="menu" style="width:22px;height:22px"></i>
+          </button>
         </div>
       </nav>
 
-      <!-- Hero Section -->
-      <section style="max-width: 1240px; margin: 0 auto; padding: 48px 16px 40px; text-align: center; position: relative;">
-        <!-- Glowing Background Radial Blob -->
-        <div style="position: absolute; top: 10%; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; height: 300px; background: radial-gradient(circle, var(--accent-glow) 0%, rgba(0,0,0,0) 70%); filter: blur(60px); pointer-events: none;"></div>
-
-        <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; background: var(--accent-glow); border: 1px solid var(--border-highlight); border-radius: 9999px; font-size: 10px; font-weight: 700; color: var(--accent); margin-bottom: 24px; max-width: 95%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" class="font-mono">
-          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--profit); display: inline-block; flex-shrink: 0;" class="animate-pulse"></span>
-          INSTITUTIONAL QUANT OS • REAL-TIME MONGODB ATLAS SYNC
+      <!-- Mobile Navigation Drawer -->
+      <div id="mobile-nav-drawer" class="mobile-nav-overlay">
+        <a href="#product" onclick="toggleMobileNav()">Product</a>
+        <a href="#features" onclick="toggleMobileNav()">Features</a>
+        <a href="#analytics" onclick="toggleMobileNav()">Analytics</a>
+        <a href="#ai-analyst" onclick="toggleMobileNav()">AI Analyst</a>
+        <a href="#pricing" onclick="toggleMobileNav()">Pricing</a>
+        <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 12px;">
+          <button onclick="toggleMobileNav(); setAuthMode('login'); navigateTo('auth');" class="btn btn-outline w-full">Log in</button>
+          <button onclick="toggleMobileNav(); setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary w-full">Start Journaling</button>
         </div>
-        
+      </div>
+
+      <!-- Hero Section -->
+      <section id="product" style="max-width: 1240px; margin: 0 auto; padding: 64px 20px 48px; text-align: center; position: relative;">
+        <!-- Glowing Background Ambient Radial -->
+        <div style="position: absolute; top: 5%; left: 50%; transform: translateX(-50%); width: 100%; max-width: 750px; height: 350px; background: radial-gradient(circle, rgba(0, 82, 204, 0.28) 0%, rgba(0, 210, 255, 0.08) 50%, rgba(0,3,10,0) 75%); filter: blur(70px); pointer-events: none;"></div>
+
+        <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 18px; background: rgba(0, 82, 204, 0.2); border: 1px solid var(--border-highlight); border-radius: 9999px; font-size: 11px; font-weight: 700; color: var(--accent); margin-bottom: 28px;" class="font-mono">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block;" class="animate-pulse"></span>
+          PRECISION TRADING PERFORMANCE SYSTEM
+        </div>
+
         <h1 class="font-heading font-bold hero-title">
-          Turn Every Trade Into an Edge. Expose Your Leaks.
+          Turn Every Trade Into an Edge.
         </h1>
-        
-        <p class="text-secondary" style="font-size: 18px; max-width: 800px; margin: 0 auto 44px; line-height: 1.6;">
-          MEGA JOURNAL exposes your performance leaks, measures your edge, and tells you what to change. Evaluate risk & process before adjusting position sizing with automated drawdown tracking, playbook rule adherence, and evidence-grounded AI analytics.
+
+        <p class="text-secondary" style="font-size: 19px; max-width: 820px; margin: 0 auto 48px; line-height: 1.6;">
+          Journal every trade. Understand your performance. Build a trading process backed by your own data.
         </p>
 
-        <div class="flex-center gap-md" style="margin-bottom: 64px;">
+        <div class="flex-center gap-md" style="margin-bottom: 72px; flex-wrap: wrap;">
           ${state.user ? `
-            <button onclick="navigateTo('dashboard')" class="btn btn-primary" style="padding: 16px 36px; font-size: 15px; font-weight: bold; border-radius: 12px;">
-              <i data-lucide="layout-dashboard" style="width:18px;height:18px"></i> Go to App Dashboard (@${state.user.username})
+            <button onclick="navigateTo('dashboard')" class="btn btn-primary" style="padding: 16px 40px; font-size: 15px; font-weight: bold; border-radius: 10px;">
+              <i data-lucide="layout-dashboard" style="width:18px;height:18px"></i> OPEN APP DASHBOARD (@${state.user.username})
             </button>
           ` : `
-            <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary" style="padding: 16px 36px; font-size: 15px; font-weight: bold; border-radius: 12px;">
-              Start Free Trial →
+            <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary" style="padding: 16px 40px; font-size: 15px; font-weight: bold; border-radius: 10px;">
+              START JOURNALING
             </button>
-            <button onclick="setAuthMode('login'); navigateTo('auth');" class="btn btn-outline" style="padding: 16px 36px; font-size: 15px; border-radius: 12px;">
-              Sign In to OS
-            </button>
+            <a href="#features" class="btn btn-outline" style="padding: 16px 36px; font-size: 15px; border-radius: 10px;">
+              EXPLORE THE PLATFORM
+            </a>
           `}
         </div>
 
-        <!-- High-Impact Live Interactive Product Card -->
-        <div class="glass-panel" style="max-width: 1080px; margin: 0 auto; text-align: left; padding: 32px; border-color: var(--border-highlight); background: var(--bg-surface); border-radius: 16px;">
+        <!-- HERO VISUAL: Mega Journal Interactive Dashboard Preview -->
+        <div class="glass-panel" style="max-width: 1120px; margin: 0 auto; text-align: left; padding: 32px; border-color: var(--border-highlight); background: var(--bg-surface); border-radius: 16px; box-shadow: 0 30px 80px rgba(0, 3, 10, 0.9);">
           <div class="flex justify-between items-center mb-lg pb-md" style="border-bottom: 1px solid var(--border);">
             <div class="flex items-center gap-md">
-              <span style="width:10px;height:10px;border-radius:50%;background:var(--profit);display:inline-block;"></span>
-              <span class="font-mono text-xs text-secondary font-bold uppercase tracking-wider">[DEMO DATA PREVIEW — SAMPLE ILLUS TRATION]</span>
+              <span style="width:10px;height:10px;border-radius:50%;background:var(--accent);display:inline-block;"></span>
+              <span class="font-mono text-xs text-secondary font-bold uppercase tracking-wider">DEMO DATA — SAMPLE TRADING JOURNAL WORKSPACE</span>
             </div>
             <div class="flex items-center gap-sm">
-              <span class="badge-pill badge-profit">100% COMPLIANT</span>
+              <span class="badge-pill badge-profit">R:R ADHERENCE 94%</span>
               <span class="badge-pill badge-accent">TRADER GRADE A</span>
             </div>
           </div>
 
           <div class="grid grid-cols-4 gap-md font-mono mb-lg">
-            <div style="background: var(--bg-dark); padding:18px; border-radius:10px; border:1px solid var(--border);">
-              <span class="stat-card-title text-secondary">ACCOUNT EQUITY</span>
-              <span class="stat-card-value text-main">$25,680.00</span>
+            <div style="background: var(--bg-dark); padding: 18px; border-radius: 10px; border: 1px solid var(--border);">
+              <span class="stat-card-title text-secondary">NET P&L</span>
+              <span class="stat-card-value text-accent">+$15,680.00</span>
             </div>
-            <div style="background: var(--bg-dark); padding:18px; border-radius:10px; border:1px solid var(--profit-glow);">
-              <span class="stat-card-title text-profit">REALIZED P&L</span>
-              <span class="stat-card-value text-profit">+$15,680.00</span>
-            </div>
-            <div style="background: var(--bg-dark); padding:18px; border-radius:10px; border:1px solid var(--border);">
+            <div style="background: var(--bg-dark); padding: 18px; border-radius: 10px; border: 1px solid var(--border);">
               <span class="stat-card-title text-secondary">WIN RATE</span>
               <span class="stat-card-value text-main">78.4%</span>
             </div>
-            <div style="background: var(--bg-dark); padding:18px; border-radius:10px; border:1px solid var(--border);">
-              <span class="stat-card-title text-secondary">EXPECTANCY R</span>
-              <span class="stat-card-value text-accent">+2.84R</span>
+            <div style="background: var(--bg-dark); padding: 18px; border-radius: 10px; border: 1px solid var(--border);">
+              <span class="stat-card-title text-secondary">PROFIT FACTOR</span>
+              <span class="stat-card-value text-main">2.84</span>
+            </div>
+            <div style="background: var(--bg-dark); padding: 18px; border-radius: 10px; border: 1px solid var(--border);">
+              <span class="stat-card-title text-secondary">AVERAGE R</span>
+              <span class="stat-card-value text-accent">+2.40R</span>
             </div>
           </div>
 
+          <!-- Hero Dashboard Recent Trades Table -->
           <div style="background: var(--bg-dark); padding: 20px; border-radius: 10px; border: 1px solid var(--border);" class="font-mono text-xs">
             <div class="flex justify-between text-secondary mb-sm font-bold uppercase text-[10px]" style="border-bottom: 1px solid var(--border); padding-bottom: 10px;">
-              <span>ASSET / SYMBOL</span><span>DIRECTION</span><span>EXECUTION RANGE</span><span>POSITION</span><span>REALIZED P&L</span>
+              <span>SYMBOL / SETUP</span><span>DIRECTION</span><span>SESSION</span><span>EXECUTION RANGE</span><span>RESULT</span>
             </div>
             <div class="flex justify-between items-center py-xs" style="border-bottom: 1px solid var(--border);">
-              <span class="font-bold text-accent">XAUUSD (Gold)</span><span class="badge-pill badge-profit">Long Buy</span><span class="text-main">2500.00 → 2520.00</span><span class="text-main">2.0 Lots</span><span class="text-profit font-bold">+$400.00</span>
+              <span class="font-bold text-accent">XAUUSD (Gold Sweep)</span><span class="badge-pill badge-profit">Long Buy</span><span class="text-secondary">London</span><span class="text-main">2500.00 → 2520.00</span><span class="text-profit font-bold">+$1,400.00 (+2.8R)</span>
+            </div>
+            <div class="flex justify-between items-center py-xs" style="border-bottom: 1px solid var(--border);">
+              <span class="font-bold text-accent">NAS100 (NY FVG)</span><span class="badge-pill badge-profit">Short Sell</span><span class="text-secondary">New York</span><span class="text-main">20050.00 → 20025.00</span><span class="text-profit font-bold">+$1,500.00 (+3.0R)</span>
             </div>
             <div class="flex justify-between items-center py-xs">
-              <span class="font-bold text-accent">NAS100 (Nasdaq)</span><span class="badge-pill badge-profit">Short Sell</span><span class="text-main">20050.00 → 20025.00</span><span class="text-main">6.0 Lots</span><span class="text-profit font-bold">+$1,500.00</span>
+              <span class="font-bold text-accent">EURUSD (Asia High)</span><span class="badge-pill badge-profit">Long Buy</span><span class="text-secondary">London</span><span class="text-main">1.0850 → 1.0890</span><span class="text-profit font-bold">+$800.00 (+2.0R)</span>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Prop Firm Compliance Ribbon -->
-      <section style="border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--bg-surface); padding: 24px 0;">
-        <div style="max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-around; flex-wrap: wrap; gap: 20px;" class="font-mono text-xs text-secondary">
-          <span style="color: var(--text-main); font-weight: bold;">BUILT FOR PROP FIRM CHALLENGES:</span>
-          <span>FTMO COMPLIANT</span>
-          <span>•</span>
-          <span>FUNDEDNEXT SHIELD</span>
-          <span>•</span>
-          <span>MYFOREXFUNDS</span>
-          <span>•</span>
-          <span>TOPSTEP COMPATIBLE</span>
+      <!-- Trust / Social Proof Capabilities Section -->
+      <section style="border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--bg-surface); padding: 36px 20px;">
+        <div style="max-width: 1200px; margin: 0 auto; text-align: center;">
+          <span class="font-mono text-xs text-secondary font-bold uppercase tracking-widest block mb-md">BUILT FOR SERIOUS TRADERS</span>
+          <p style="font-size: 16px; color: var(--text-main); font-weight: 600; max-width: 700px; margin: 0 auto;">
+            "Everything you need to turn trading activity into measurable performance."
+          </p>
         </div>
       </section>
 
-      <!-- 6-Pillar Feature Suite -->
-      <section id="features" style="max-width: 1240px; margin: 0 auto; padding: 90px 24px;">
+      <!-- Problem Section: Trading Without Data Is Guesswork -->
+      <section style="max-width: 1240px; margin: 0 auto; padding: 90px 20px;">
         <div class="text-center mb-2xl">
-          <span class="badge-pill badge-accent mb-sm">QUANTITATIVE MODULES</span>
-          <h2 class="font-heading font-bold text-center text-main" style="font-size: 38px;">Institutional Performance Engine</h2>
-          <p class="text-secondary text-center text-sm" style="max-width: 600px; margin: 8px auto 0;">Eliminate subjective guesswork with mathematical execution diagnostics.</p>
+          <span class="badge-pill badge-loss mb-sm">THE TRADING DILEMMA</span>
+          <h2 class="font-heading font-bold text-main" style="font-size: 38px;">Trading Without Data Is Guesswork.</h2>
+          <p class="text-secondary text-sm" style="max-width: 650px; margin: 12px auto 0;">
+            Most traders repeat the same costly errors because their performance is unmeasured.
+          </p>
         </div>
 
-        <div class="grid grid-cols-3 gap-lg">
+        <div class="grid grid-cols-3 gap-lg mb-2xl">
           <div class="glass-panel">
-            <i data-lucide="compass" class="text-accent mb-md" style="width:28px;height:28px"></i>
-            <h3 class="font-heading font-bold text-md mb-xs text-main">Pre-Market Workspace</h3>
-            <p class="text-secondary text-xs" style="line-height: 1.6;">Align directional bias, reference levels (PDH/PDL/Asian High/Low), news events, and risk parameters before placing live orders.</p>
+            <i data-lucide="image" class="text-loss mb-md" style="width:28px;height:28px"></i>
+            <h3 class="font-heading font-bold text-md mb-xs text-main">Random Screenshots</h3>
+            <p class="text-secondary text-xs" style="line-height: 1.6;">Chart pictures scattered across folders without linked execution prices, risk rules, or outcome statistics.</p>
           </div>
 
           <div class="glass-panel">
-            <i data-lucide="sliders" class="text-accent mb-md" style="width:28px;height:28px"></i>
-            <h3 class="font-heading font-bold text-md mb-xs text-main">What-If Simulator</h3>
-            <p class="text-secondary text-xs" style="line-height: 1.6;">Model hypothetical equity curves. Test removing your worst N trades, scaling risk per trade, or excluding Friday sessions.</p>
+            <i data-lucide="file-x" class="text-loss mb-md" style="width:28px;height:28px"></i>
+            <h3 class="font-heading font-bold text-md mb-xs text-main">Scattered Notes</h3>
+            <p class="text-secondary text-xs" style="line-height: 1.6;">Disorganized notebooks and spreadsheets that fail to aggregate win rates or show setup performance.</p>
           </div>
 
           <div class="glass-panel">
-            <i data-lucide="shield-alert" class="text-loss mb-md" style="width:28px;height:28px"></i>
-            <h3 class="font-heading font-bold text-md mb-xs text-main">Behavioral Leak Detector</h3>
-            <p class="text-secondary text-xs" style="line-height: 1.6;">Automated audit uncovering early exits, overtrading, Friday performance decay, and unprotected entries with dollar cost loss calculations.</p>
+            <i data-lucide="help-circle" class="text-loss mb-md" style="width:28px;height:28px"></i>
+            <h3 class="font-heading font-bold text-md mb-xs text-main">Unclear Performance</h3>
+            <p class="text-secondary text-xs" style="line-height: 1.6;">Inability to answer simple questions like which trading session or instrument generates true net profits.</p>
           </div>
 
           <div class="glass-panel">
-            <i data-lucide="zap" class="text-accent mb-md" style="width:28px;height:28px"></i>
-            <h3 class="font-heading font-bold text-md mb-xs text-main">Edge Finder Matrix</h3>
-            <p class="text-secondary text-xs" style="line-height: 1.6;">Discover your highest win-rate setups, peak execution sessions, and strongest asset symbols backed by empirical sample sizes.</p>
+            <i data-lucide="rotate-ccw" class="text-loss mb-md" style="width:28px;height:28px"></i>
+            <h3 class="font-heading font-bold text-md mb-xs text-main">Repeated Mistakes</h3>
+            <p class="text-secondary text-xs" style="line-height: 1.6;">Revenge trading, overleveraging, and early exits recurring week after week without systemic detection.</p>
           </div>
 
           <div class="glass-panel">
-            <i data-lucide="sparkles" class="text-profit mb-md" style="width:28px;height:28px"></i>
-            <h3 class="font-heading font-bold text-md mb-xs text-main">AI Analyst 2.0</h3>
-            <p class="text-secondary text-xs" style="line-height: 1.6;">Quant review engine auditing trade history against strict risk compliance rules to generate actionable diagnostic recommendations.</p>
+            <i data-lucide="bar-chart-2" class="text-loss mb-md" style="width:28px;height:28px"></i>
+            <h3 class="font-heading font-bold text-md mb-xs text-main">No Strategy Statistics</h3>
+            <p class="text-secondary text-xs" style="line-height: 1.6;">Trading multiple setups without knowing the individual win rate, profit factor, or expectancy of each.</p>
           </div>
 
           <div class="glass-panel">
-            <i data-lucide="shield-check" class="text-profit mb-md" style="width:28px;height:28px"></i>
-            <h3 class="font-heading font-bold text-md mb-xs text-main">Prop Firm Shield</h3>
-            <p class="text-secondary text-xs" style="line-height: 1.6;">Enforce 5% daily drawdown limits, 10% total loss rules, and risk per trade caps to pass prop firm evaluation challenges seamlessly.</p>
+            <i data-lucide="alert-triangle" class="text-loss mb-md" style="width:28px;height:28px"></i>
+            <h3 class="font-heading font-bold text-md mb-xs text-main">No Understanding of Risk</h3>
+            <p class="text-secondary text-xs" style="line-height: 1.6;">Breeching prop firm daily loss limits or personal drawdown thresholds due to unmonitored risk exposure.</p>
+          </div>
+        </div>
+
+        <div class="glass-panel text-center" style="padding: 40px; border-color: var(--border-highlight); background: var(--bg-surface);">
+          <h3 class="font-heading font-bold text-2xl text-accent mb-xs">MEGA JOURNAL turns your trading history into a performance system.</h3>
+          <p class="text-secondary text-sm">Organize execution, enforce discipline, and isolate your edge with quantitative clarity.</p>
+        </div>
+      </section>
+
+      <!-- 6 Core Feature Pillars Section -->
+      <section id="features" style="max-width: 1240px; margin: 0 auto; padding: 60px 20px 90px;">
+        <div class="text-center mb-2xl">
+          <span class="badge-pill badge-accent mb-sm">CORE MODULES</span>
+          <h2 class="font-heading font-bold text-main" style="font-size: 38px;">Built to Build Repeatable Edge.</h2>
+          <p class="text-secondary text-sm" style="max-width: 600px; margin: 8px auto 0;">Explore the six pillars of the Mega Journal performance system.</p>
+        </div>
+
+        <!-- Feature Interactive Tabs -->
+        <div class="feature-tabs">
+          <button onclick="setFeatureTab('journal')" id="tab-btn-journal" class="feature-tab-btn active">1. Trade Journal</button>
+          <button onclick="setFeatureTab('analytics')" id="tab-btn-analytics" class="feature-tab-btn">2. Performance Analytics</button>
+          <button onclick="setFeatureTab('playbooks')" id="tab-btn-playbooks" class="feature-tab-btn">3. Strategy Playbooks</button>
+          <button onclick="setFeatureTab('risk')" id="tab-btn-risk" class="feature-tab-btn">4. Prop Firm Risk</button>
+          <button onclick="setFeatureTab('backtest')" id="tab-btn-backtest" class="feature-tab-btn">5. Backtesting</button>
+          <button onclick="setFeatureTab('ai')" id="tab-btn-ai" class="feature-tab-btn">6. AI Analyst</button>
+        </div>
+
+        <!-- Dynamic Feature Content Display Container -->
+        <div id="feature-tab-content" class="glass-panel" style="padding: 36px; min-height: 380px; border-color: var(--border-highlight);">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </section>
+
+      <!-- 1. TRADE JOURNAL SHOWCASE -->
+      <section style="background: var(--bg-surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 90px 20px;">
+        <div style="max-width: 1240px; margin: 0 auto;" class="grid grid-cols-2 gap-2xl items-center">
+          <div>
+            <span class="badge-pill badge-accent mb-sm">TRADE JOURNAL</span>
+            <h2 class="font-heading font-bold text-3xl mb-md text-main">Know Every Trade.</h2>
+            <p class="text-secondary text-sm mb-lg" style="line-height: 1.7;">
+              Capture the details that actually explain your performance. Record entry, exit, stop loss, take profit, R-multiple, market session, strategy tag, execution rating, and psychological state for every trade.
+            </p>
+            <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary">
+              EXPLORE TRADE JOURNAL →
+            </button>
+          </div>
+
+          <div class="glass-panel font-mono text-xs" style="padding: 24px;">
+            <div class="flex justify-between items-center mb-md pb-xs" style="border-bottom: 1px solid var(--border);">
+              <span class="text-secondary font-bold">HIGH-DENSITY TRADE LOG PREVIEW</span>
+              <span class="text-accent">3 EXECUTIONS LOGGED</span>
+            </div>
+            <div class="space-y-sm">
+              <div class="p-sm rounded" style="background: var(--bg-dark); border: 1px solid var(--border);">
+                <div class="flex justify-between mb-xs">
+                  <span class="font-bold text-accent">NAS100 • Short</span>
+                  <span class="text-profit font-bold">+$1,500.00 (+3.0R)</span>
+                </div>
+                <div class="flex justify-between text-secondary text-[10px]">
+                  <span>Entry: 20050 | Exit: 20025</span>
+                  <span>Strategy: NY FVG Sweep</span>
+                </div>
+              </div>
+
+              <div class="p-sm rounded" style="background: var(--bg-dark); border: 1px solid var(--border);">
+                <div class="flex justify-between mb-xs">
+                  <span class="font-bold text-accent">XAUUSD • Long</span>
+                  <span class="text-profit font-bold">+$1,400.00 (+2.8R)</span>
+                </div>
+                <div class="flex justify-between text-secondary text-[10px]">
+                  <span>Entry: 2500 | Exit: 2520</span>
+                  <span>Strategy: London Liquidity</span>
+                </div>
+              </div>
+
+              <div class="p-sm rounded" style="background: var(--bg-dark); border: 1px solid var(--border);">
+                <div class="flex justify-between mb-xs">
+                  <span class="font-bold text-accent">EURUSD • Long</span>
+                  <span class="text-profit font-bold">+$800.00 (+2.0R)</span>
+                </div>
+                <div class="flex justify-between text-secondary text-[10px]">
+                  <span>Entry: 1.0850 | Exit: 1.0890</span>
+                  <span>Strategy: Asian High Break</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- Technical Specifications Bar -->
-      <section id="specs" style="background: var(--bg-surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 48px 24px;">
-        <div style="max-width: 1200px; margin: 0 auto;" class="grid grid-cols-4 gap-md text-center">
-          <div>
-            <span class="font-heading font-bold text-2xl text-accent block mb-xs">25+</span>
-            <span class="text-xs text-secondary font-bold">MONGOOSE DATA MODELS</span>
+      <!-- 2. ANALYTICS SHOWCASE -->
+      <section id="analytics" style="max-width: 1240px; margin: 0 auto; padding: 90px 20px;">
+        <div class="text-center mb-2xl">
+          <span class="badge-pill badge-accent mb-sm">PERFORMANCE ANALYTICS</span>
+          <h2 class="font-heading font-bold text-main" style="font-size: 38px;">See Your Trading Clearly.</h2>
+          <p class="text-secondary text-sm" style="max-width: 650px; margin: 8px auto 0;">
+            Track your equity curve, profit factor, win rate, expectancy, and max drawdown with automated precision.
+          </p>
+        </div>
+
+        <div class="glass-panel" style="padding: 32px; border-color: var(--border-highlight);">
+          <div class="grid grid-cols-4 gap-md font-mono mb-lg text-center">
+            <div style="background: var(--bg-dark); padding: 16px; border-radius: 8px;">
+              <span class="stat-card-title">NET P&L</span>
+              <span class="stat-card-value text-accent">+$15,680</span>
+            </div>
+            <div style="background: var(--bg-dark); padding: 16px; border-radius: 8px;">
+              <span class="stat-card-title">WIN RATE</span>
+              <span class="stat-card-value text-main">78.4%</span>
+            </div>
+            <div style="background: var(--bg-dark); padding: 16px; border-radius: 8px;">
+              <span class="stat-card-title">PROFIT FACTOR</span>
+              <span class="stat-card-value text-main">2.84</span>
+            </div>
+            <div style="background: var(--bg-dark); padding: 16px; border-radius: 8px;">
+              <span class="stat-card-title">MAX DRAWDOWN</span>
+              <span class="stat-card-value text-loss">3.2%</span>
+            </div>
           </div>
-          <div>
-            <span class="font-heading font-bold text-2xl text-profit block mb-xs">0 KB</span>
-            <span class="text-xs text-secondary font-bold">FRAMEWORK OVERHEAD (VANILLA JS)</span>
-          </div>
-          <div>
-            <span class="font-heading font-bold text-2xl text-accent block mb-xs">MongoDB</span>
-            <span class="text-xs text-secondary font-bold">ATLAS CLOUD CONNECTED</span>
-          </div>
-          <div>
-            <span class="font-heading font-bold text-2xl text-profit block mb-xs">100%</span>
-            <span class="text-xs text-secondary font-bold">INSTITUTIONAL DATA PRIVACY</span>
+
+          <div style="height: 220px; width: 100%; background: var(--bg-dark); border-radius: 10px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; position: relative;" class="font-mono text-xs">
+            <div style="position: absolute; inset: 20px; display: flex; flex-direction: column; justify-content: space-between; border-left: 1px dashed var(--border); border-bottom: 1px dashed var(--border); padding-left: 10px; padding-bottom: 10px;">
+              <div style="width: 100%; height: 2px; background: linear-gradient(90deg, var(--accent) 0%, rgba(0,210,255,0.2) 100%);"></div>
+              <div class="flex justify-between text-secondary text-[10px]">
+                <span>Start ($10,000)</span>
+                <span>Week 2 ($18,400)</span>
+                <span>Current ($25,680)</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- Footer CTA Banner -->
-      <section style="max-width: 1200px; margin: 0 auto; padding: 80px 24px 60px; text-align: center;">
-        <div class="glass-panel" style="padding: 48px 24px; border-color: var(--border-highlight); background: var(--bg-surface);">
-          <h2 class="font-heading font-bold text-3xl mb-sm text-main">Ready to elevate your trading performance?</h2>
-          <p class="text-secondary text-sm mb-lg" style="max-width: 600px; margin: 0 auto 24px;">Join disciplined traders around the world logging trades with mathematical precision.</p>
-          <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary" style="padding: 14px 28px; font-size: 15px; font-weight: bold;">
-            Create Free Account
-          </button>
+      <!-- 3. STRATEGY SHOWCASE -->
+      <section style="background: var(--bg-surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 90px 20px;">
+        <div style="max-width: 1240px; margin: 0 auto;" class="grid grid-cols-2 gap-2xl items-center">
+          <div class="glass-panel font-mono text-xs">
+            <div class="flex justify-between items-center mb-md pb-xs" style="border-bottom: 1px solid var(--border);">
+              <span class="font-bold text-accent">PLAYBOOK: LONDON LIQUIDITY SWEEP</span>
+              <span class="badge-pill badge-profit">78% WIN RATE</span>
+            </div>
+            <div class="space-y-xs text-secondary mb-md">
+              <p>✓ Asian High/Low Liquidity Swept</p>
+              <p>✓ M5 Market Structure Shift + Displacement</p>
+              <p>✓ Entry in M5 Fair Value Gap (FVG)</p>
+              <p>✓ Minimum R:R Target: 1:2.5</p>
+            </div>
+            <div class="grid grid-cols-3 gap-sm text-center pt-xs" style="border-top: 1px solid var(--border);">
+              <div><span class="text-secondary text-[10px] block">EXPECTANCY</span><span class="font-bold text-main">+2.4R</span></div>
+              <div><span class="text-secondary text-[10px] block">PROFIT FACTOR</span><span class="font-bold text-main">3.1</span></div>
+              <div><span class="text-secondary text-[10px] block">SAMPLES</span><span class="font-bold text-accent">42 Trades</span></div>
+            </div>
+          </div>
+
+          <div>
+            <span class="badge-pill badge-accent mb-sm">STRATEGY PLAYBOOKS</span>
+            <h2 class="font-heading font-bold text-3xl mb-md text-main">Turn Setups Into Playbooks.</h2>
+            <p class="text-secondary text-sm mb-lg" style="line-height: 1.7;">
+              Transform discretionary setups into repeatable rules. Define checklists, rules, and entry criteria to compare individual strategy win rates, profit factors, and expectancy.
+            </p>
+            <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary">
+              BUILD STRATEGY PLAYBOOK →
+            </button>
+          </div>
         </div>
       </section>
 
-      <!-- Footer -->
-      <footer style="max-width: 1200px; margin: 0 auto; padding: 40px 24px; text-align: center;" class="text-xs text-secondary">
-        <div class="flex-center gap-sm mb-sm">
-          <div class="logo-icon" style="width:24px;height:24px;"><span style="font-weight:900;font-size:11px;">MJ</span></div>
-          <span class="font-heading font-bold text-main" style="font-size:14px">MEGA JOURNAL</span>
+      <!-- 4. PROP FIRM RISK SECTION -->
+      <section style="max-width: 1240px; margin: 0 auto; padding: 90px 20px;">
+        <div class="grid grid-cols-2 gap-2xl items-center">
+          <div>
+            <span class="badge-pill badge-accent mb-sm">PROP FIRM RISK MONITOR</span>
+            <h2 class="font-heading font-bold text-3xl mb-md text-main">Know Your Risk Before It Becomes a Problem.</h2>
+            <p class="text-secondary text-sm mb-lg" style="line-height: 1.7;">
+              Monitor daily loss limits, maximum total drawdown, profit targets, distance to breach, and risk per trade to protect your evaluation challenges and funded accounts.
+            </p>
+            <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary">
+              MONITOR PROP RISK →
+            </button>
+          </div>
+
+          <div class="glass-panel font-mono text-xs" style="padding: 24px;">
+            <div class="flex justify-between items-center mb-md pb-xs" style="border-bottom: 1px solid var(--border);">
+              <span class="text-secondary font-bold">PROP CHALLENGE DASHBOARD</span>
+              <span class="badge-pill badge-profit">SAFE • 0 BREACHES</span>
+            </div>
+            <div class="space-y-md">
+              <div>
+                <div class="flex justify-between text-secondary mb-xs">
+                  <span>DAILY LOSS LIMIT ($2,500 MAX)</span>
+                  <span class="text-main font-bold">$350.00 USED (14%)</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: var(--bg-dark); border-radius: 4px; overflow: hidden;">
+                  <div style="width: 14%; height: 100%; background: var(--accent);"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-secondary mb-xs">
+                  <span>MAX DRAWDOWN ($5,000 MAX)</span>
+                  <span class="text-main font-bold">$800.00 USED (16%)</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: var(--bg-dark); border-radius: 4px; overflow: hidden;">
+                  <div style="width: 16%; height: 100%; background: var(--accent);"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-secondary mb-xs">
+                  <span>PROFIT TARGET ($5,000 TARGET)</span>
+                  <span class="text-profit font-bold">$4,200.00 REACHED (84%)</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: var(--bg-dark); border-radius: 4px; overflow: hidden;">
+                  <div style="width: 84%; height: 100%; background: var(--accent);"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <p class="mb-sm">The Trading Performance OS — Built for disciplined traders seeking a mathematical edge.</p>
-        <p style="color: var(--text-muted);">© 2026 Mega Journal. All rights reserved.</p>
+      </section>
+
+      <!-- 5. BACKTESTING SECTION -->
+      <section style="background: var(--bg-surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 90px 20px;">
+        <div style="max-width: 1240px; margin: 0 auto;" class="grid grid-cols-2 gap-2xl items-center">
+          <div class="glass-panel font-mono text-xs" style="padding: 24px;">
+            <div class="flex justify-between items-center mb-md pb-xs" style="border-bottom: 1px solid var(--border);">
+              <span class="text-secondary font-bold">HISTORICAL CANDLE REPLAY SESSION</span>
+              <span class="badge-pill badge-accent">BACKTEST MODE</span>
+            </div>
+            <div style="height: 140px; background: var(--bg-dark); border-radius: 8px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+              <span class="text-secondary text-[11px]">[CANDLE REPLAY VISUALIZER • ENTRY @ 2500.00 | SL @ 2492.00 | TP @ 2520.00]</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-secondary text-[10px]">SPEED: 2X • PAUSED</span>
+              <span class="text-profit font-bold">SIMULATED P&L: +$1,400.00</span>
+            </div>
+          </div>
+
+          <div>
+            <span class="badge-pill badge-accent mb-sm">HISTORICAL REPLAY</span>
+            <h2 class="font-heading font-bold text-3xl mb-md text-main">Test Before You Risk.</h2>
+            <p class="text-secondary text-sm mb-lg" style="line-height: 1.7;">
+              Replay historical price action candle by candle. Execute hypothetical trades, measure setup metrics, and refine your rules before risking live capital.
+            </p>
+            <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary">
+              START BACKTEST SESSION →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. AI ANALYST SECTION -->
+      <section id="ai-analyst" style="max-width: 1240px; margin: 0 auto; padding: 90px 20px;">
+        <div class="text-center mb-2xl">
+          <span class="badge-pill badge-accent mb-sm">AI ANALYST ASSISTANT</span>
+          <h2 class="font-heading font-bold text-main" style="font-size: 38px;">Ask Your Journal.</h2>
+          <p class="text-secondary text-sm" style="max-width: 650px; margin: 8px auto 0;">
+            An intelligent analytical assistant grounded in your own trade history and performance metrics.
+          </p>
+        </div>
+
+        <div class="glass-panel" style="max-width: 860px; margin: 0 auto; padding: 32px; border-color: var(--border-highlight);">
+          <div class="flex items-center justify-between mb-lg pb-sm" style="border-bottom: 1px solid var(--border);">
+            <div class="flex items-center gap-sm">
+              <i data-lucide="sparkles" class="text-accent" style="width:20px;height:20px"></i>
+              <span class="font-mono text-xs text-secondary font-bold">DEMO DATA — AI ANALYST QUERY INTERFACE</span>
+            </div>
+            <span class="badge-pill badge-accent">ASSISTANT MODE</span>
+          </div>
+
+          <div class="space-y-md font-mono text-xs mb-lg">
+            <div class="p-md rounded" style="background: var(--bg-dark); border: 1px solid var(--border);">
+              <span class="text-secondary block mb-xs">TRADER QUERY:</span>
+              <p class="text-main font-bold">"Which session is my most profitable?"</p>
+            </div>
+
+            <div class="p-md rounded" style="background: rgba(0, 82, 204, 0.15); border: 1px solid var(--border-highlight);">
+              <span class="text-accent block mb-xs">AI ANALYST RESPONSE:</span>
+              <p class="text-main mb-sm" style="line-height: 1.6;">
+                "Based on your selected period of 42 trades, <strong>London Session</strong> has produced your strongest performance with a <strong>78.4% win rate</strong> and an <strong>expectancy of +2.84R</strong> ($1,400 avg win vs $500 avg loss)."
+              </p>
+              <div class="p-xs rounded bg-dark font-mono text-[10px] text-secondary border border-border" style="background: var(--bg-dark);">
+                EVIDENCE PANEL: London: 28 Trades (+2.84R) | NY: 10 Trades (+0.65R) | Asia: 4 Trades (-0.40R)
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- HOW IT WORKS SECTION -->
+      <section id="how-it-works" style="background: var(--bg-surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 90px 20px;">
+        <div style="max-width: 1240px; margin: 0 auto;" class="text-center">
+          <span class="badge-pill badge-accent mb-sm">PROCESS</span>
+          <h2 class="font-heading font-bold text-main mb-2xl" style="font-size: 38px;">How It Works</h2>
+
+          <div class="grid grid-cols-3 gap-xl text-left">
+            <div class="glass-panel">
+              <span class="font-mono text-3xl font-bold text-accent block mb-md">01</span>
+              <h3 class="font-heading font-bold text-xl mb-xs text-main">JOURNAL</h3>
+              <p class="text-secondary text-xs" style="line-height: 1.6;">Record every trade with execution prices, risk rules, playbooks, notes, and psychological state.</p>
+            </div>
+
+            <div class="glass-panel">
+              <span class="font-mono text-3xl font-bold text-accent block mb-md">02</span>
+              <h3 class="font-heading font-bold text-xl mb-xs text-main">ANALYZE</h3>
+              <p class="text-secondary text-xs" style="line-height: 1.6;">Understand your performance metrics, equity growth, session win rates, and strategy expectancy.</p>
+            </div>
+
+            <div class="glass-panel">
+              <span class="font-mono text-3xl font-bold text-accent block mb-md">03</span>
+              <h3 class="font-heading font-bold text-xl mb-xs text-main">IMPROVE</h3>
+              <p class="text-secondary text-xs" style="line-height: 1.6;">Turn objective data into better execution, eliminate costly leaks, and scale position sizing with confidence.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PERFORMANCE PHILOSOPHY SECTION -->
+      <section style="max-width: 1000px; margin: 0 auto; padding: 90px 20px; text-align: center;">
+        <h2 class="font-heading font-bold text-3xl mb-md text-main" style="line-height: 1.3;">
+          "Trade less emotionally.<br>Measure more objectively."
+        </h2>
+        <p class="text-secondary text-sm" style="max-width: 640px; margin: 0 auto 36px; line-height: 1.7;">
+          Your journal should do more than store trades. It should show you what is actually working.
+        </p>
+      </section>
+
+      <!-- PRICING SECTION -->
+      <section id="pricing" style="background: var(--bg-surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 90px 20px;">
+        <div style="max-width: 1240px; margin: 0 auto;" class="text-center">
+          <span class="badge-pill badge-accent mb-sm">PLANS & PRICING</span>
+          <h2 class="font-heading font-bold text-main mb-md" style="font-size: 38px;">Built for Every Stage of Your Trading.</h2>
+          <p class="text-secondary text-sm mb-2xl" style="max-width: 600px; margin: 0 auto;">Select the plan tailored to your trading volume and analytics needs.</p>
+
+          <div class="grid grid-cols-3 gap-xl text-left">
+            <!-- Free Tier -->
+            <div class="glass-panel flex flex-col justify-between" style="padding: 32px;">
+              <div>
+                <span class="badge-pill badge-accent mb-md">FREE TIER</span>
+                <h3 class="font-heading font-bold text-2xl mb-xs text-main">Starter</h3>
+                <p class="text-secondary text-xs mb-lg">Essential trade journaling for individual traders.</p>
+                <div class="font-mono text-3xl font-bold text-main mb-lg">$0 <span class="text-xs text-secondary font-normal">/ forever</span></div>
+                <div class="space-y-xs font-mono text-xs text-secondary mb-xl">
+                  <p>✓ Up to 50 Logged Trades</p>
+                  <p>✓ Core Win Rate & P&L Analytics</p>
+                  <p>✓ Standard Trade Tags & Notes</p>
+                  <p>✓ Single Trading Account</p>
+                </div>
+              </div>
+              <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-outline w-full">
+                GET STARTED
+              </button>
+            </div>
+
+            <!-- Pro Tier -->
+            <div class="glass-panel flex flex-col justify-between" style="padding: 32px; border-color: var(--border-highlight); background: var(--bg-card); position: relative;">
+              <div style="position: absolute; top: -12px; right: 24px;" class="badge-pill badge-profit">MOST POPULAR</div>
+              <div>
+                <span class="badge-pill badge-accent mb-md">PRO TIER</span>
+                <h3 class="font-heading font-bold text-2xl mb-xs text-main">Performance Pro</h3>
+                <p class="text-secondary text-xs mb-lg">Complete analytics, strategy playbooks & prop risk.</p>
+                <div class="font-mono text-3xl font-bold text-accent mb-lg">$29 <span class="text-xs text-secondary font-normal">/ month</span></div>
+                <div class="space-y-xs font-mono text-xs text-secondary mb-xl">
+                  <p>✓ Unlimited Trade Journaling</p>
+                  <p>✓ Advanced Expectancy & Sharpe Metrics</p>
+                  <p>✓ Strategy Playbooks & Checklists</p>
+                  <p>✓ Prop Firm Risk Monitor & Drawdown Shield</p>
+                  <p>✓ Unlimited Accounts & CSV Imports</p>
+                </div>
+              </div>
+              <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary w-full">
+                START JOURNALING
+              </button>
+            </div>
+
+            <!-- Elite Tier -->
+            <div class="glass-panel flex flex-col justify-between" style="padding: 32px;">
+              <div>
+                <span class="badge-pill badge-accent mb-md">ELITE TIER</span>
+                <h3 class="font-heading font-bold text-2xl mb-xs text-main">Institutional Elite</h3>
+                <p class="text-secondary text-xs mb-lg">AI Analyst, backtesting replay & priority features.</p>
+                <div class="font-mono text-3xl font-bold text-main mb-lg">$79 <span class="text-xs text-secondary font-normal">/ month</span></div>
+                <div class="space-y-xs font-mono text-xs text-secondary mb-xl">
+                  <p>✓ Everything in Pro Plan</p>
+                  <p>✓ AI Analyst Conversational Assistant</p>
+                  <p>✓ Historical Candle Replay Backtesting</p>
+                  <p>✓ Behavioral Leak Detector Engine</p>
+                  <p>✓ Priority Cloud Sync & Export</p>
+                </div>
+              </div>
+              <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-outline w-full">
+                JOIN THE WAITLIST
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FINAL CINEMATIC CTA SECTION -->
+      <section style="max-width: 1240px; margin: 0 auto; padding: 100px 20px; text-align: center; position: relative;">
+        <div class="glass-panel" style="padding: 64px 32px; border-color: var(--border-highlight); background: var(--bg-surface); border-radius: 20px;">
+          <h2 class="font-heading font-bold text-3xl mb-sm text-main" style="font-size: 42px;">Your Trading Data Is Waiting.</h2>
+          <p class="text-secondary text-md mb-xl" style="max-width: 600px; margin: 0 auto 36px;">Stop guessing. Start measuring.</p>
+          <div class="flex-center gap-md">
+            <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary" style="padding: 16px 40px; font-size: 15px; font-weight: bold; border-radius: 10px;">
+              START JOURNALING
+            </button>
+            <a href="#product" class="btn btn-outline" style="padding: 16px 32px; font-size: 15px; border-radius: 10px;">
+              EXPLORE MEGA JOURNAL
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- FOOTER -->
+      <footer style="border-top: 1px solid var(--border); background: var(--bg-surface); padding: 60px 20px 40px;">
+        <div style="max-width: 1240px; margin: 0 auto;" class="grid grid-cols-4 gap-xl mb-2xl text-xs">
+          <div>
+            <div class="flex items-center gap-sm mb-md">
+              <div class="logo-icon"><span style="font-weight: 900; font-size: 14px;">MJ</span></div>
+              <span class="font-heading font-bold text-main" style="font-size: 16px;">MEGA JOURNAL</span>
+            </div>
+            <p class="text-secondary" style="line-height: 1.6;">The Trading Performance Journal — Built for serious traders seeking a repeatable edge.</p>
+          </div>
+
+          <div>
+            <span class="font-heading font-bold text-main uppercase block mb-md" style="letter-spacing: 0.5px;">PRODUCT</span>
+            <div class="space-y-xs text-secondary">
+              <p><a href="#product" style="color:inherit;text-decoration:none;">Trade Journal</a></p>
+              <p><a href="#analytics" style="color:inherit;text-decoration:none;">Performance Analytics</a></p>
+              <p><a href="#features" style="color:inherit;text-decoration:none;">Strategy Playbooks</a></p>
+              <p><a href="#features" style="color:inherit;text-decoration:none;">Prop Firm Risk</a></p>
+            </div>
+          </div>
+
+          <div>
+            <span class="font-heading font-bold text-main uppercase block mb-md" style="letter-spacing: 0.5px;">RESOURCES</span>
+            <div class="space-y-xs text-secondary">
+              <p><a href="#ai-analyst" style="color:inherit;text-decoration:none;">AI Analyst Assistant</a></p>
+              <p><a href="#pricing" style="color:inherit;text-decoration:none;">Pricing Plans</a></p>
+              <p><a href="#how-it-works" style="color:inherit;text-decoration:none;">Documentation</a></p>
+              <p><a href="#how-it-works" style="color:inherit;text-decoration:none;">Contact Support</a></p>
+            </div>
+          </div>
+
+          <div>
+            <span class="font-heading font-bold text-main uppercase block mb-md" style="letter-spacing: 0.5px;">LEGAL</span>
+            <div class="space-y-xs text-secondary">
+              <p><a href="#privacy" style="color:inherit;text-decoration:none;">Privacy Policy</a></p>
+              <p><a href="#terms" style="color:inherit;text-decoration:none;">Terms of Service</a></p>
+              <p><a href="#disclaimer" style="color:inherit;text-decoration:none;">Performance Disclaimer</a></p>
+            </div>
+          </div>
+        </div>
+
+        <div style="max-width: 1240px; margin: 0 auto; border-top: 1px solid var(--border); padding-top: 24px;" class="flex justify-between items-center text-xs text-secondary">
+          <p>© 2026 Mega Journal. All rights reserved.</p>
+          <p class="font-mono text-[11px]">VERSION 2.0 • THE TRADING PERFORMANCE JOURNAL</p>
+        </div>
       </footer>
+
     </div>
-  `;
+    `;
   },
 
   auth: () => {
@@ -1814,7 +2256,137 @@ const renderView = (viewName) => {
   if (viewName === 'dashboard') {
     renderEquityChart();
   }
+
+  if (viewName === 'landing') {
+    window.setFeatureTab('journal');
+  }
 };
+
+/* ===== LANDING PAGE INTERACTIVE HELPERS ===== */
+window.currentFeatureTab = 'journal';
+
+window.setFeatureTab = (tab) => {
+  window.currentFeatureTab = tab;
+  const container = document.getElementById('feature-tab-content');
+  const tabs = ['journal', 'analytics', 'playbooks', 'risk', 'backtest', 'ai'];
+  
+  tabs.forEach(t => {
+    const btn = document.getElementById(`tab-btn-${t}`);
+    if (btn) {
+      if (t === tab) btn.classList.add('active');
+      else btn.classList.remove('active');
+    }
+  });
+
+  if (!container) return;
+
+  const contentMap = {
+    journal: `
+      <div class="grid grid-cols-2 gap-xl items-center font-mono text-xs">
+        <div>
+          <span class="badge-pill badge-accent mb-sm">1. TRADE JOURNAL</span>
+          <h3 class="font-heading font-bold text-2xl mb-xs text-main">Execution & Psychology Journal</h3>
+          <p class="text-secondary mb-md font-sans text-sm" style="line-height: 1.6;">Record entry, exit, stop loss, take profit, R-multiple, session, emotion state, execution rating, tags, and detailed trade notes.</p>
+          <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary">Start Journaling →</button>
+        </div>
+        <div class="p-lg rounded" style="background: var(--bg-dark); border: 1px solid var(--border);">
+          <div class="flex justify-between text-secondary mb-xs text-[10px]"><span>TRADE #1042</span><span class="text-profit font-bold">+$1,400.00 (+2.8R)</span></div>
+          <p class="text-main font-bold mb-xs">XAUUSD Long • London Open</p>
+          <p class="text-secondary text-[11px] font-sans">"Swept Asian Low (2498), displacement above M5 MSS, entry on FVG retest. Stuck strictly to 1:2.5 R:R target."</p>
+        </div>
+      </div>
+    `,
+    analytics: `
+      <div class="grid grid-cols-2 gap-xl items-center font-mono text-xs">
+        <div>
+          <span class="badge-pill badge-accent mb-sm">2. PERFORMANCE ANALYTICS</span>
+          <h3 class="font-heading font-bold text-2xl mb-xs text-main">Quantitative Diagnostics</h3>
+          <p class="text-secondary mb-md font-sans text-sm" style="line-height: 1.6;">Automated equity curve growth, profit factor, win rate distribution, Sharpe ratio, expectancy per R, and max drawdown tracking.</p>
+          <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary">View Performance →</button>
+        </div>
+        <div class="p-lg rounded" style="background: var(--bg-dark); border: 1px solid var(--border);">
+          <div class="grid grid-cols-2 gap-sm text-center mb-md">
+            <div class="p-sm rounded border border-border" style="background: var(--bg-surface);"><span class="text-secondary text-[10px] block font-heading">PROFIT FACTOR</span><span class="font-bold text-accent text-lg">2.84</span></div>
+            <div class="p-sm rounded border border-border" style="background: var(--bg-surface);"><span class="text-secondary text-[10px] block font-heading">SHARPE RATIO</span><span class="font-bold text-profit text-lg">2.14</span></div>
+          </div>
+          <span class="text-secondary text-[10px]">BEST SESSION: LONDON (78.4% WIN RATE)</span>
+        </div>
+      </div>
+    `,
+    playbooks: `
+      <div class="grid grid-cols-2 gap-xl items-center font-mono text-xs">
+        <div>
+          <span class="badge-pill badge-accent mb-sm">3. STRATEGY PLAYBOOKS</span>
+          <h3 class="font-heading font-bold text-2xl mb-xs text-main">Setup Rule Engine</h3>
+          <p class="text-secondary mb-md font-sans text-sm" style="line-height: 1.6;">Build strategy playbooks with mandatory pre-flight checklists. Compare win rate and expectancy across setups.</p>
+          <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary">Build Playbook →</button>
+        </div>
+        <div class="p-lg rounded" style="background: var(--bg-dark); border: 1px solid var(--border);">
+          <span class="font-bold text-accent block mb-xs">PLAYBOOK: LIQUIDITY SWEEP & REVERSAL</span>
+          <p class="text-profit mb-xs">✓ Pre-Flight Checklist Complete (4/4 Rules)</p>
+          <span class="text-secondary text-[10px]">EXPECTANCY: +2.84R OVER 42 TRADES</span>
+        </div>
+      </div>
+    `,
+    risk: `
+      <div class="grid grid-cols-2 gap-xl items-center font-mono text-xs">
+        <div>
+          <span class="badge-pill badge-accent mb-sm">4. PROP FIRM RISK</span>
+          <h3 class="font-heading font-bold text-2xl mb-xs text-main">Drawdown Shield & Breach Protection</h3>
+          <p class="text-secondary mb-md font-sans text-sm" style="line-height: 1.6;">Set daily loss limits, max drawdown thresholds, and risk-per-trade caps to keep prop firm accounts safe.</p>
+          <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary">Protect Account →</button>
+        </div>
+        <div class="p-lg rounded" style="background: var(--bg-dark); border: 1px solid var(--border);">
+          <span class="font-bold text-profit block mb-xs">FTMO CHALLENGE: 0 BREACHES</span>
+          <span class="text-secondary text-[10px] block mb-sm">DAILY LOSS: $350 / $2,500 MAX (14%)</span>
+          <div style="width:100%;height:6px;background:var(--bg-surface);border-radius:3px;overflow:hidden;"><div style="width:14%;height:100%;background:var(--accent);"></div></div>
+        </div>
+      </div>
+    `,
+    backtest: `
+      <div class="grid grid-cols-2 gap-xl items-center font-mono text-xs">
+        <div>
+          <span class="badge-pill badge-accent mb-sm">5. BACKTESTING</span>
+          <h3 class="font-heading font-bold text-2xl mb-xs text-main">Historical Candle Replay</h3>
+          <p class="text-secondary mb-md font-sans text-sm" style="line-height: 1.6;">Replay historical market data step-by-step. Test setups and entry triggers before risking live capital.</p>
+          <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary">Start Replay →</button>
+        </div>
+        <div class="p-lg rounded" style="background: var(--bg-dark); border: 1px solid var(--border);">
+          <span class="font-bold text-accent block mb-xs">SESSION: XAUUSD M5 REPLAY</span>
+          <span class="text-secondary text-[10px]">SIMULATED TRADES: 25 • WIN RATE: 76.0%</span>
+        </div>
+      </div>
+    `,
+    ai: `
+      <div class="grid grid-cols-2 gap-xl items-center font-mono text-xs">
+        <div>
+          <span class="badge-pill badge-accent mb-sm">6. AI ANALYST</span>
+          <h3 class="font-heading font-bold text-2xl mb-xs text-main">Data-Grounded Conversational Assistant</h3>
+          <p class="text-secondary mb-md font-sans text-sm" style="line-height: 1.6;">Ask questions about your trade history, discover behavioral leaks, and get empirical performance breakdowns.</p>
+          <button onclick="setAuthMode('signup'); navigateTo('auth');" class="btn btn-primary">Ask AI Assistant →</button>
+        </div>
+        <div class="p-lg rounded" style="background: var(--bg-dark); border: 1px solid var(--border);">
+          <span class="text-accent font-bold block mb-xs">"Which setup has my lowest drawdown?"</span>
+          <p class="text-main font-sans text-[11px]">"London Liquidity Sweep has your lowest drawdown (1.2% max) and highest R:R ratio."</p>
+        </div>
+      </div>
+    `
+  };
+
+  container.innerHTML = contentMap[tab] || contentMap.journal;
+};
+
+window.toggleMobileNav = () => {
+  const drawer = document.getElementById('mobile-nav-drawer');
+  if (drawer) drawer.classList.toggle('active');
+};
+
+document.addEventListener('mousemove', (e) => {
+  const glow = document.getElementById('cursor-glow');
+  if (glow) {
+    glow.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
+  }
+});
 
 window.navigateTo = async (view) => {
   if (view !== 'auth' && view !== 'landing' && !state.user) {
